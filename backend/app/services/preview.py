@@ -77,7 +77,9 @@ def render_preview(
         pts = np.array([[int(x * w), int(y * h)] for x, y in zone.polygon], dtype=np.int32)
         colour = LEVEL_COLOURS.get(zone_levels.get(zone.id, DensityLevel.LOW))
         cv2.polylines(img, [pts], True, colour, thick)
-        cv2.putText(img, zone.name or zone.id, tuple(pts[0] + [6, 22 * thick]),
+        x0, y0 = int(pts[:, 0].min()) + 6, int(pts[:, 1].min()) + 20 * thick
+        y0 = max(y0, 46 * thick)                  # keep clear of the banner
+        cv2.putText(img, zone.name or zone.id, (x0, y0),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.55 * thick, colour, thick, cv2.LINE_AA)
 
     for line in config.lines:

@@ -116,7 +116,17 @@ def _camera_live(camera: Camera, registry: RuntimeRegistry, settings: Settings,
         preview_available=bool(settings.preview_enabled and runtime is not None
                                and runtime.preview() is not None),
         has_analytics=camera.has_analytics,
+        warnings=_config_warnings(camera, settings),
     )
+
+
+def _config_warnings(camera: Camera, settings: Settings) -> list[str]:
+    try:
+        config = AnalyticsConfig.model_validate(camera.analytics_config or {})
+    except Exception:
+        return ["Stored analytics configuration is invalid; lines and zones are disabled."]
+    fps = config.tuning.process_fps or settings.ai_process_fps
+    return config.warnings(fps)
 
 
 def live_overview(session: Session, settings: Settings,
@@ -244,7 +254,6 @@ def set_analytics_config(session: Session, camera_id: str, config: AnalyticsConf
     """Store the config. The camera manager restarts that camera's worker on its
     next sync (AI_SYNC_INTERVAL) so the new lines and zones take effect."""
     camera = camera_service.get_by_code(session, camera_id)
-    camera.analytics_config = None if config.is_empty and config == AnalyticsConfig() \
-        else config.model_dump(mode="json")
+    camera.analytics_config = None if config == AnalyticsConfig() else config.model_dump(mode="json")
     session.commit()
     return config

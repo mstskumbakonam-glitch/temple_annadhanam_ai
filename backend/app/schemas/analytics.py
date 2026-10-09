@@ -68,6 +68,7 @@ class CameraLive(BaseModel):
     last_error: str | None = None
     preview_available: bool = False
     has_analytics: bool = False
+    warnings: list[str] = []
 
 
 class LiveOverview(BaseModel):

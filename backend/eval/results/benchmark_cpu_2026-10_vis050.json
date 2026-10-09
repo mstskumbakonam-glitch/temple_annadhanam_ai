@@ -1,0 +1,745 @@
+{
+  "created_at": "2026-10-09T08:15:00.193439+00:00",
+  "environment": {
+    "python": "3.13.16",
+    "machine": "x86_64",
+    "processor": "x86_64",
+    "cpu_count": 2,
+    "device": "cpu"
+  },
+  "datasets": {
+    "coco128_images": 0,
+    "coco128_person_boxes": 0,
+    "mot_frames": 12,
+    "mot_pedestrian_boxes": 244,
+    "mot_min_visibility": 0.5
+  },
+  "operating_threshold": 0.4,
+  "threshold_sweep": [
+    0.25,
+    0.3,
+    0.4
+  ],
+  "runs": [
+    {
+      "model": "yolov8n.pt",
+      "imgsz": 640,
+      "mot_person": {
+        "0.25": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.25,
+          "tp": 163,
+          "fp": 26,
+          "fn": 81,
+          "precision": 0.8624,
+          "recall": 0.668,
+          "f1": 0.7529,
+          "ap50": 0.7954,
+          "ap50_95": 0.4693
+        },
+        "0.3": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.3,
+          "tp": 152,
+          "fp": 22,
+          "fn": 92,
+          "precision": 0.8736,
+          "recall": 0.623,
+          "f1": 0.7273,
+          "ap50": 0.7954,
+          "ap50_95": 0.4693
+        },
+        "0.4": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.4,
+          "tp": 136,
+          "fp": 16,
+          "fn": 108,
+          "precision": 0.8947,
+          "recall": 0.5574,
+          "f1": 0.6869,
+          "ap50": 0.7954,
+          "ap50_95": 0.4693
+        }
+      },
+      "mot_count": {
+        "0.25": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 3.6667,
+          "rmse": 3.873,
+          "bias": -3.6667,
+          "relative_mae": 0.1803
+        },
+        "0.3": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 5.0,
+          "rmse": 5.1316,
+          "bias": -5.0,
+          "relative_mae": 0.2459
+        },
+        "0.4": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 6.8333,
+          "rmse": 7.0475,
+          "bias": -6.8333,
+          "relative_mae": 0.3361
+        }
+      },
+      "latency_fullhd": {
+        "frames": 12,
+        "frame_size": "1920x1080",
+        "median_ms": 92.3,
+        "p95_ms": 95.9,
+        "max_fps_single_camera": 10.84
+      },
+      "eval_seconds": 3.0,
+      "peak_rss_mb": 957.0
+    },
+    {
+      "model": "yolov8n.pt",
+      "imgsz": 960,
+      "mot_person": {
+        "0.25": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.25,
+          "tp": 195,
+          "fp": 29,
+          "fn": 49,
+          "precision": 0.8705,
+          "recall": 0.7992,
+          "f1": 0.8333,
+          "ap50": 0.8305,
+          "ap50_95": 0.5287
+        },
+        "0.3": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.3,
+          "tp": 191,
+          "fp": 24,
+          "fn": 53,
+          "precision": 0.8884,
+          "recall": 0.7828,
+          "f1": 0.8322,
+          "ap50": 0.8305,
+          "ap50_95": 0.5287
+        },
+        "0.4": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.4,
+          "tp": 172,
+          "fp": 21,
+          "fn": 72,
+          "precision": 0.8912,
+          "recall": 0.7049,
+          "f1": 0.7872,
+          "ap50": 0.8305,
+          "ap50_95": 0.5287
+        }
+      },
+      "mot_count": {
+        "0.25": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 1.0,
+          "rmse": 1.291,
+          "bias": 1.0,
+          "relative_mae": 0.0492
+        },
+        "0.3": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 0.8333,
+          "rmse": 1.0,
+          "bias": 0.0,
+          "relative_mae": 0.041
+        },
+        "0.4": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 2.1667,
+          "rmse": 2.5166,
+          "bias": -2.1667,
+          "relative_mae": 0.1066
+        }
+      },
+      "latency_fullhd": {
+        "frames": 12,
+        "frame_size": "1920x1080",
+        "median_ms": 193.2,
+        "p95_ms": 220.8,
+        "max_fps_single_camera": 5.18
+      },
+      "eval_seconds": 5.8,
+      "peak_rss_mb": 980.0
+    },
+    {
+      "model": "yolov8n.pt",
+      "imgsz": 1280,
+      "mot_person": {
+        "0.25": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.25,
+          "tp": 213,
+          "fp": 45,
+          "fn": 31,
+          "precision": 0.8256,
+          "recall": 0.873,
+          "f1": 0.8486,
+          "ap50": 0.8632,
+          "ap50_95": 0.5473
+        },
+        "0.3": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.3,
+          "tp": 210,
+          "fp": 36,
+          "fn": 34,
+          "precision": 0.8537,
+          "recall": 0.8607,
+          "f1": 0.8571,
+          "ap50": 0.8632,
+          "ap50_95": 0.5473
+        },
+        "0.4": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.4,
+          "tp": 200,
+          "fp": 23,
+          "fn": 44,
+          "precision": 0.8969,
+          "recall": 0.8197,
+          "f1": 0.8565,
+          "ap50": 0.8632,
+          "ap50_95": 0.5473
+        }
+      },
+      "mot_count": {
+        "0.25": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 5.75,
+          "rmse": 6.0346,
+          "bias": 5.75,
+          "relative_mae": 0.2828
+        },
+        "0.3": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 3.3333,
+          "rmse": 3.6056,
+          "bias": 3.3333,
+          "relative_mae": 0.1639
+        },
+        "0.4": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 0.9167,
+          "rmse": 1.118,
+          "bias": 0.4167,
+          "relative_mae": 0.0451
+        }
+      },
+      "latency_fullhd": {
+        "frames": 12,
+        "frame_size": "1920x1080",
+        "median_ms": 297.2,
+        "p95_ms": 407.5,
+        "max_fps_single_camera": 3.36
+      },
+      "eval_seconds": 8.8,
+      "peak_rss_mb": 1022.0
+    },
+    {
+      "model": "yolo11n.pt",
+      "imgsz": 640,
+      "mot_person": {
+        "0.25": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.25,
+          "tp": 123,
+          "fp": 14,
+          "fn": 121,
+          "precision": 0.8978,
+          "recall": 0.5041,
+          "f1": 0.6457,
+          "ap50": 0.734,
+          "ap50_95": 0.4227
+        },
+        "0.3": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.3,
+          "tp": 112,
+          "fp": 11,
+          "fn": 132,
+          "precision": 0.9106,
+          "recall": 0.459,
+          "f1": 0.6104,
+          "ap50": 0.734,
+          "ap50_95": 0.4227
+        },
+        "0.4": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.4,
+          "tp": 94,
+          "fp": 9,
+          "fn": 150,
+          "precision": 0.9126,
+          "recall": 0.3852,
+          "f1": 0.5418,
+          "ap50": 0.734,
+          "ap50_95": 0.4227
+        }
+      },
+      "mot_count": {
+        "0.25": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 7.4167,
+          "rmse": 8.4607,
+          "bias": -7.4167,
+          "relative_mae": 0.3648
+        },
+        "0.3": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 9.25,
+          "rmse": 10.0623,
+          "bias": -9.25,
+          "relative_mae": 0.4549
+        },
+        "0.4": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 11.4167,
+          "rmse": 12.2577,
+          "bias": -11.4167,
+          "relative_mae": 0.5615
+        }
+      },
+      "latency_fullhd": {
+        "frames": 12,
+        "frame_size": "1920x1080",
+        "median_ms": 73.6,
+        "p95_ms": 80.9,
+        "max_fps_single_camera": 13.6
+      },
+      "eval_seconds": 2.5,
+      "peak_rss_mb": 1022.0
+    },
+    {
+      "model": "yolo11n.pt",
+      "imgsz": 960,
+      "mot_person": {
+        "0.25": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.25,
+          "tp": 188,
+          "fp": 33,
+          "fn": 56,
+          "precision": 0.8507,
+          "recall": 0.7705,
+          "f1": 0.8086,
+          "ap50": 0.8016,
+          "ap50_95": 0.5086
+        },
+        "0.3": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.3,
+          "tp": 175,
+          "fp": 27,
+          "fn": 69,
+          "precision": 0.8663,
+          "recall": 0.7172,
+          "f1": 0.7848,
+          "ap50": 0.8016,
+          "ap50_95": 0.5086
+        },
+        "0.4": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.4,
+          "tp": 140,
+          "fp": 17,
+          "fn": 104,
+          "precision": 0.8917,
+          "recall": 0.5738,
+          "f1": 0.6983,
+          "ap50": 0.8016,
+          "ap50_95": 0.5086
+        }
+      },
+      "mot_count": {
+        "0.25": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 1.1667,
+          "rmse": 1.5275,
+          "bias": 0.1667,
+          "relative_mae": 0.0574
+        },
+        "0.3": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 2.1667,
+          "rmse": 2.5166,
+          "bias": -2.1667,
+          "relative_mae": 0.1066
+        },
+        "0.4": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 6.1667,
+          "rmse": 6.5574,
+          "bias": -6.1667,
+          "relative_mae": 0.3033
+        }
+      },
+      "latency_fullhd": {
+        "frames": 12,
+        "frame_size": "1920x1080",
+        "median_ms": 135.6,
+        "p95_ms": 156.6,
+        "max_fps_single_camera": 7.37
+      },
+      "eval_seconds": 4.1,
+      "peak_rss_mb": 1022.0
+    },
+    {
+      "model": "yolo11n.pt",
+      "imgsz": 1280,
+      "mot_person": {
+        "0.25": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.25,
+          "tp": 206,
+          "fp": 49,
+          "fn": 38,
+          "precision": 0.8078,
+          "recall": 0.8443,
+          "f1": 0.8257,
+          "ap50": 0.8397,
+          "ap50_95": 0.5463
+        },
+        "0.3": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.3,
+          "tp": 204,
+          "fp": 36,
+          "fn": 40,
+          "precision": 0.85,
+          "recall": 0.8361,
+          "f1": 0.843,
+          "ap50": 0.8397,
+          "ap50_95": 0.5463
+        },
+        "0.4": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.4,
+          "tp": 199,
+          "fp": 32,
+          "fn": 45,
+          "precision": 0.8615,
+          "recall": 0.8156,
+          "f1": 0.8379,
+          "ap50": 0.8397,
+          "ap50_95": 0.5463
+        }
+      },
+      "mot_count": {
+        "0.25": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 7.6667,
+          "rmse": 8.2057,
+          "bias": 7.6667,
+          "relative_mae": 0.377
+        },
+        "0.3": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 4.5,
+          "rmse": 5.1801,
+          "bias": 4.5,
+          "relative_mae": 0.2213
+        },
+        "0.4": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 1.8333,
+          "rmse": 2.2361,
+          "bias": 1.3333,
+          "relative_mae": 0.0902
+        }
+      },
+      "latency_fullhd": {
+        "frames": 12,
+        "frame_size": "1920x1080",
+        "median_ms": 288.0,
+        "p95_ms": 313.2,
+        "max_fps_single_camera": 3.47
+      },
+      "eval_seconds": 7.6,
+      "peak_rss_mb": 1050.0
+    },
+    {
+      "model": "yolo26n.pt",
+      "imgsz": 640,
+      "mot_person": {
+        "0.25": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.25,
+          "tp": 96,
+          "fp": 16,
+          "fn": 148,
+          "precision": 0.8571,
+          "recall": 0.3934,
+          "f1": 0.5393,
+          "ap50": 0.7078,
+          "ap50_95": 0.3838
+        },
+        "0.3": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.3,
+          "tp": 93,
+          "fp": 16,
+          "fn": 151,
+          "precision": 0.8532,
+          "recall": 0.3811,
+          "f1": 0.5269,
+          "ap50": 0.7078,
+          "ap50_95": 0.3838
+        },
+        "0.4": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.4,
+          "tp": 82,
+          "fp": 14,
+          "fn": 162,
+          "precision": 0.8542,
+          "recall": 0.3361,
+          "f1": 0.4824,
+          "ap50": 0.7078,
+          "ap50_95": 0.3838
+        }
+      },
+      "mot_count": {
+        "0.25": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 9.6667,
+          "rmse": 10.2956,
+          "bias": -9.6667,
+          "relative_mae": 0.4754
+        },
+        "0.3": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 9.9167,
+          "rmse": 10.5948,
+          "bias": -9.9167,
+          "relative_mae": 0.4877
+        },
+        "0.4": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 11.4167,
+          "rmse": 12.2644,
+          "bias": -11.4167,
+          "relative_mae": 0.5615
+        }
+      },
+      "latency_fullhd": {
+        "frames": 12,
+        "frame_size": "1920x1080",
+        "median_ms": 78.6,
+        "p95_ms": 94.3,
+        "max_fps_single_camera": 12.72
+      },
+      "eval_seconds": 2.3,
+      "peak_rss_mb": 1050.0
+    },
+    {
+      "model": "yolo26n.pt",
+      "imgsz": 960,
+      "mot_person": {
+        "0.25": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.25,
+          "tp": 151,
+          "fp": 25,
+          "fn": 93,
+          "precision": 0.858,
+          "recall": 0.6189,
+          "f1": 0.719,
+          "ap50": 0.7784,
+          "ap50_95": 0.4942
+        },
+        "0.3": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.3,
+          "tp": 132,
+          "fp": 21,
+          "fn": 112,
+          "precision": 0.8627,
+          "recall": 0.541,
+          "f1": 0.665,
+          "ap50": 0.7784,
+          "ap50_95": 0.4942
+        },
+        "0.4": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.4,
+          "tp": 121,
+          "fp": 15,
+          "fn": 123,
+          "precision": 0.8897,
+          "recall": 0.4959,
+          "f1": 0.6368,
+          "ap50": 0.7784,
+          "ap50_95": 0.4942
+        }
+      },
+      "mot_count": {
+        "0.25": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 3.75,
+          "rmse": 4.3108,
+          "bias": -3.4167,
+          "relative_mae": 0.1844
+        },
+        "0.3": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 5.5,
+          "rmse": 6.442,
+          "bias": -5.5,
+          "relative_mae": 0.2705
+        },
+        "0.4": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 7.5,
+          "rmse": 8.1955,
+          "bias": -7.5,
+          "relative_mae": 0.3689
+        }
+      },
+      "latency_fullhd": {
+        "frames": 12,
+        "frame_size": "1920x1080",
+        "median_ms": 130.6,
+        "p95_ms": 155.6,
+        "max_fps_single_camera": 7.66
+      },
+      "eval_seconds": 4.1,
+      "peak_rss_mb": 1050.0
+    },
+    {
+      "model": "yolo26n.pt",
+      "imgsz": 1280,
+      "mot_person": {
+        "0.25": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.25,
+          "tp": 212,
+          "fp": 39,
+          "fn": 32,
+          "precision": 0.8446,
+          "recall": 0.8689,
+          "f1": 0.8566,
+          "ap50": 0.8415,
+          "ap50_95": 0.5524
+        },
+        "0.3": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.3,
+          "tp": 207,
+          "fp": 34,
+          "fn": 37,
+          "precision": 0.8589,
+          "recall": 0.8484,
+          "f1": 0.8536,
+          "ap50": 0.8415,
+          "ap50_95": 0.5524
+        },
+        "0.4": {
+          "images": 12,
+          "gt_boxes": 244,
+          "operating_threshold": 0.4,
+          "tp": 198,
+          "fp": 28,
+          "fn": 46,
+          "precision": 0.8761,
+          "recall": 0.8115,
+          "f1": 0.8426,
+          "ap50": 0.8415,
+          "ap50_95": 0.5524
+        }
+      },
+      "mot_count": {
+        "0.25": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 6.4167,
+          "rmse": 6.5638,
+          "bias": 6.4167,
+          "relative_mae": 0.3156
+        },
+        "0.3": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 4.0833,
+          "rmse": 4.2525,
+          "bias": 4.0833,
+          "relative_mae": 0.2008
+        },
+        "0.4": {
+          "samples": 12,
+          "mean_true": 20.3333,
+          "mae": 1.4167,
+          "rmse": 1.7559,
+          "bias": 0.75,
+          "relative_mae": 0.0697
+        }
+      },
+      "latency_fullhd": {
+        "frames": 12,
+        "frame_size": "1920x1080",
+        "median_ms": 310.4,
+        "p95_ms": 351.6,
+        "max_fps_single_camera": 3.22
+      },
+      "eval_seconds": 7.9,
+      "peak_rss_mb": 1076.0
+    }
+  ]
+}

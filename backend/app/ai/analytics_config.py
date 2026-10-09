@@ -111,7 +111,22 @@ class AlertSettings(_Strict):
     smoothing_seconds: float = Field(default=3.0, ge=0.0, le=60)  # rolling median window
 
 
+class CameraTuning(_Strict):
+    """Per-camera overrides of the global AI_* settings.
+
+    Measured trade-off (docs/EVALUATION.md): entry/exit counting needs >= 5
+    processed frames per second, while counting a wide crowded area benefits
+    most from a larger inference image. On a CPU you rarely get both, so tune
+    each camera for its job: a gate camera fast and small, a hall camera big
+    and slow."""
+
+    image_size: int | None = Field(default=None, ge=320, le=1920, multiple_of=32)
+    process_fps: float | None = Field(default=None, gt=0.0, le=30.0)
+    confidence: float | None = Field(default=None, ge=0.05, le=0.95)
+
+
 class AnalyticsConfig(_Strict):
+    tuning: CameraTuning = Field(default_factory=CameraTuning)
     lines: list[CountingLine] = Field(default_factory=list, max_length=16)
     zones: list[Zone] = Field(default_factory=list, max_length=16)
     alerts: AlertSettings = Field(default_factory=AlertSettings)
@@ -133,6 +148,16 @@ class AnalyticsConfig(_Strict):
     @property
     def is_empty(self) -> bool:
         return not self.lines and not self.zones
+
+    def warnings(self, effective_fps: float) -> list[str]:
+        """Configuration problems worth showing an operator."""
+        out = []
+        if self.lines and effective_fps < 4.0:
+            out.append(
+                f"Entry/exit lines need about 5 processed frames per second; this camera runs "
+                f"at {effective_fps:g}. Expect missed crossings (see docs/EVALUATION.md)."
+            )
+        return out
 
 
 def _polygon_area(points: list[Point]) -> float:

@@ -290,6 +290,12 @@ class CameraWorker:
                 now = self._clock()
                 if ok and frame is not None and getattr(frame, "size", 1) > 0:
                     last_good = now
+                    jumped = getattr(source, "consume_discontinuity", None)
+                    if jumped is not None and jumped():
+                        # Recorded video looped: frames before and after the cut are
+                        # unrelated, so tracks must not continue across it.
+                        self.buffer.clear()
+                        self._reset_tracking.set()
                     if accept_gap and now - last_put < accept_gap:
                         continue
                     last_put = now

@@ -77,6 +77,7 @@ class VideoFileFrameSource:
         self._interval = 1.0 / fallback_fps
         self._next_due = 0.0
         self.loops = 0
+        self._jumped = False
 
     def open(self, timeout: float) -> bool:
         import cv2
@@ -110,8 +111,15 @@ class VideoFileFrameSource:
 
             self._capture.set(cv2.CAP_PROP_POS_FRAMES, 0)
             self.loops += 1
+            self._jumped = True
             ok, frame = self._capture.read()
         return bool(ok), frame
+
+    def consume_discontinuity(self) -> bool:
+        """True once after the video jumped back to its start. The worker then
+        restarts tracking, so nobody is 'teleported' across a counting line."""
+        jumped, self._jumped = self._jumped, False
+        return jumped
 
     def release(self) -> None:
         capture, self._capture = self._capture, None

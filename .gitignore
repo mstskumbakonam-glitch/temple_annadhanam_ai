@@ -18,6 +18,9 @@ frontend/dist/
 *.pt
 *.onnx
 recordings/
+backend/demo_videos/*
+!backend/demo_videos/README.md
+backend/models/
 snapshots/
 
 # OS / editor
