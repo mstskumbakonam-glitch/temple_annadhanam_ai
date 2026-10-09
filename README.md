@@ -3,7 +3,17 @@
 A standalone system that uses CCTV cameras and AI to manage an annadhanam (community meal) hall:
 visitor counting, staff attendance, seat occupancy, and a live dashboard.
 
-**Status: Phase 5 of 12 - real-time AI camera pipeline (YOLO + ByteTrack).**
+**Status: Phase 5 of 12 - real-time AI camera pipeline (YOLO + ByteTrack) with crowd
+analytics: entry/exit lines, density zones, queue wait, alerts, history, a monitoring
+dashboard and a clearly labelled recorded-video demo mode.**
+
+| Document | What is in it |
+|---|---|
+| [docs/AUDIT.md](docs/AUDIT.md) | Architecture, feature matrix (before/after), defects fixed |
+| [docs/EVALUATION.md](docs/EVALUATION.md) | Measured accuracy and speed, simulation, temple-camera test protocol |
+| [docs/TECHNOLOGY_REVIEW.md](docs/TECHNOLOGY_REVIEW.md) | Detector/tracker/counting options, licences, decisions |
+| [docs/WINDOWS_DEMO.md](docs/WINDOWS_DEMO.md) | Step-by-step demo on Windows |
+| [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) | API keys, environment, safe deployment, privacy |
 
 ## Tech stack
 
@@ -89,6 +99,12 @@ Routers stay thin; queries and transactions live in `app/services`.
 | Visitors | `GET /api/visitors`, `/current`, `/today`, `/{visitor_code}`, `/{visitor_code}/events` |
 | Staff | `GET|POST /api/staff`, `GET /api/staff/attendance`, `GET|PUT|DELETE /api/staff/{staff_code}`, `GET /api/staff/{staff_code}/attendance` |
 | Seats | `GET|POST /api/seats`, `GET /api/seats/status`, `GET /api/seats/history`, `GET|PUT|DELETE /api/seats/{seat_id}` |
+| Crowd analytics | `GET /api/analytics/live`, `GET /api/analytics/history`, `GET /api/alerts`, `POST /api/alerts/{id}/acknowledge`, `GET|PUT /api/cameras/{camera_id}/analytics`, `GET /api/cameras/{camera_id}/preview.jpg` |
+
+**Authentication.** Set `API_VIEWER_KEYS` / `API_ADMIN_KEYS` in `.env` and send
+`Authorization: Bearer <key>`. Viewers read; admins also change configuration. With no
+keys the API is open (development only — production refuses to start). See
+[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 List endpoints return `{items, page, page_size, total}` with `page_size` capped at 200.
 Errors return `{detail, code}`; SQLAlchemy messages are logged, never returned.
@@ -202,6 +218,44 @@ The default suite uses a deterministic fake YOLO model and a scripted stream, wi
 real Ultralytics ByteTrack. Real-model tests are skipped, and reported as skipped, when
 no weights are configured.
 
+## Crowd analytics (Phase 5b)
+
+Each camera can have counting **lines** and **zones** (`PUT /api/cameras/{id}/analytics`),
+in frame fractions (0..1) so they survive resolution changes:
+
+```json
+{
+  "tuning": {"image_size": 640, "process_fps": 5},
+  "lines": [{"id": "GATE", "name": "Main gate", "start": [0.1, 0.6], "end": [0.9, 0.6]}],
+  "zones": [{"id": "QUEUE", "kind": "queue", "polygon": [[0.05,0.1],[0.45,0.1],[0.45,0.95],[0.05,0.95]],
+             "queue_alert_length": 15, "thresholds": {"medium": 8, "high": 12, "critical": 18}}],
+  "alerts": {"raise_after_seconds": 10, "clear_after_seconds": 30, "min_level": "HIGH"}
+}
+```
+
+* Line crossings are stored as anonymous `visitor_events` (`ENTERED`/`EXITED`, `visitor_id` NULL).
+* Alerts go to `crowd_alerts` (one row per alert, raised → cleared); per-minute counts to
+  `crowd_count_snapshots` for the trend chart.
+* `tuning` overrides the global `AI_*` values per camera. Measured guidance: gate cameras
+  need ≥ 5 AI FPS; wide crowded views need image size 960–1280 ([EVALUATION](docs/EVALUATION.md)).
+
+### Demo mode
+
+`DEMO_MODE=true` lets a camera use `demo://<file>` to play a video from
+`backend/demo_videos/` in a loop through the real pipeline. Such cameras are reported as
+`source_kind: "recorded"` and the dashboard shows a RECORDED banner; they are never
+presented as live. `python ../scripts/seed_demo.py --video clip.mp4` registers one with a
+default layout. Full walkthrough: [docs/WINDOWS_DEMO.md](docs/WINDOWS_DEMO.md).
+
+### Evaluation
+
+```bash
+cd backend
+python -m eval.run_detection_benchmark --models <w>/yolo11n.pt --imgsz 640 1280 \
+    --coco128 <data>/coco128 --mot <data>/MOT17/train --out eval/results/mine.json
+python -m eval.run_crossing_simulation --out eval/results/crossing.json
+```
+
 ## Project layout
 
 ```
@@ -214,12 +268,16 @@ backend/app/
   api/           REST routers, dependencies, error handlers
   schemas/       Pydantic request/response models
   services/      Query and transaction logic
-  ai/            model loader, detector, ByteTrack tracker, pipeline, processors
+  ai/            model loader, detector, ByteTrack tracker, pipeline, processors,
+                 analytics (lines, zones, queues, alerts) + analytics_config
+  security.py    API keys/roles, rate limiting, security headers
   camera/        RTSP source, frame buffer, worker, manager, runtime state
   utils/         Helpers
 backend/alembic/ Migration environment (env.py reads .env)
+backend/eval/    reproducible benchmarks (metrics, datasets, simulation) and results
 backend/tests/   pytest, PostgreSQL only
-frontend/src/    React dashboard (Phase 10)
+frontend/src/    React monitoring dashboard (polls /api/analytics/*)
+docs/            audit, evaluation, technology review, Windows demo, deployment
 ```
 
 ## Roadmap
@@ -228,7 +286,7 @@ frontend/src/    React dashboard (Phase 10)
 2. PostgreSQL + SQLAlchemy + Alembic
 3. Models and first migration
 4. FastAPI REST endpoints
-5. YOLO + ByteTrack  <- current
+5. YOLO + ByteTrack, crowd analytics, demo mode, dashboard  <- current
 6. Visitor management
 7. Staff + face recognition
 8. Seat occupancy
