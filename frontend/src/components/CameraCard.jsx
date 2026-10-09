@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { api } from "../services/api.js";
-import { ago, dash, duration, LEVEL_CLASS, num } from "../format.js";
+import { api } from "../lib/api.js";
+import { ago, dash, duration, LEVEL_CLASS, num } from "../lib/format.js";
 
 const STATE_LABEL = {
   online: "Online",
@@ -98,7 +98,7 @@ export default function CameraCard({ camera, now }) {
         </div>
         <div className="badges">
           <span className={`badge ${recorded ? "badge-recorded" : "badge-live"}`}>
-            {recorded ? "RECORDED" : "LIVE"}
+            {recorded ? "RECORDED" : camera.ai_running ? "LIVE" : "CAMERA"}
           </span>
           <span className={`status status-${state}`}>
             <i aria-hidden="true" />

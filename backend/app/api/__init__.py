@@ -10,6 +10,7 @@ from app.api.cameras import router as cameras_router
 from app.api.dashboard import router as dashboard_router
 from app.api.errors import register_exception_handlers
 from app.api.health import router as health_router
+from app.api.management import ROUTERS as MANAGEMENT_ROUTERS
 from app.api.seats import router as seats_router
 from app.api.staff import router as staff_router
 from app.api.visitors import router as visitors_router
@@ -24,6 +25,7 @@ ALL_ROUTERS = [
     visitors_router,
     staff_router,
     seats_router,
+    *MANAGEMENT_ROUTERS,
 ]
 
 __all__ = [

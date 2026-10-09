@@ -3,12 +3,17 @@
 A standalone system that uses CCTV cameras and AI to manage an annadhanam (community meal) hall:
 visitor counting, staff attendance, seat occupancy, and a live dashboard.
 
+**Temple & annadhanam hall management:** multiple temples and halls, seat status with
+concurrency protection, session calendar (Asia/Kolkata), staff and daily attendance,
+reports with CSV, and a sidebar dashboard. AI / CCTV monitoring is an optional section.
+
 **Status: Phase 5 of 12 - real-time AI camera pipeline (YOLO + ByteTrack) with crowd
 analytics: entry/exit lines, density zones, queue wait, alerts, history, a monitoring
 dashboard and a clearly labelled recorded-video demo mode.**
 
 | Document | What is in it |
 |---|---|
+| [docs/MANAGEMENT.md](docs/MANAGEMENT.md) | Temples, halls, seats, sessions, staff: data model, counting rules, roles, API |
 | [docs/AUDIT.md](docs/AUDIT.md) | Architecture, feature matrix (before/after), defects fixed |
 | [docs/EVALUATION.md](docs/EVALUATION.md) | Measured accuracy and speed, simulation, temple-camera test protocol |
 | [docs/TECHNOLOGY_REVIEW.md](docs/TECHNOLOGY_REVIEW.md) | Detector/tracker/counting options, licences, decisions |

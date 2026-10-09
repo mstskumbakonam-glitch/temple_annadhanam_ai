@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.models import Camera, Visitor
 from app.models.enums import CameraStatus
 from app.schemas.dashboard import DashboardSummary, HallOccupancy
-from app.services import seat_service, staff_service, visitor_service
+from app.services import staff_service, visitor_service
 
 
 def _camera_counts(session: Session) -> tuple[int, int, int]:
@@ -44,7 +44,9 @@ def _today_entry_exit_counts(session: Session) -> tuple[int, int]:
 def get_summary(session: Session) -> DashboardSummary:
     total_cameras, online_cameras, offline_cameras = _camera_counts(session)
     today_entries, today_exits = _today_entry_exit_counts(session)
-    total_seats, occupied_seats = seat_service.occupancy_counts(session)
+    from app.services.temple_service import add_counts, seat_counts_by_hall
+
+    seats = add_counts(seat_counts_by_hall(session).values())
 
     return DashboardSummary(
         total_cameras=total_cameras,
@@ -54,10 +56,11 @@ def get_summary(session: Session) -> DashboardSummary:
         today_entries=today_entries,
         today_exits=today_exits,
         staff_present=staff_service.count_present(session),
-        total_seats=total_seats,
-        occupied_seats=occupied_seats,
-        empty_seats=total_seats - occupied_seats,
-        occupancy_percentage=seat_service.occupancy_percentage(total_seats, occupied_seats),
+        total_seats=seats.capacity,
+        occupied_seats=seats.occupied,
+        reserved_seats=seats.reserved,
+        empty_seats=seats.available,
+        occupancy_percentage=seats.occupancy_percentage,
     )
 
 
@@ -67,11 +70,14 @@ def get_hall_occupancy(session: Session, hall_id: str) -> HallOccupancy:
     An unknown hall is not an error: it simply has no seats, so every counter is
     zero and the percentage is 0.0 rather than a division by zero.
     """
-    total, occupied = seat_service.occupancy_counts(session, hall_id=hall_id)
+    from app.services.temple_service import SeatCounts, seat_counts_by_hall
+
+    c = seat_counts_by_hall(session, [hall_id]).get(hall_id, SeatCounts())
     return HallOccupancy(
         hall_id=hall_id,
-        total_seats=total,
-        occupied_seats=occupied,
-        empty_seats=total - occupied,
-        occupancy_percentage=seat_service.occupancy_percentage(total, occupied),
+        total_seats=c.capacity,
+        occupied_seats=c.occupied,
+        reserved_seats=c.reserved,
+        empty_seats=c.available,
+        occupancy_percentage=c.occupancy_percentage,
     )

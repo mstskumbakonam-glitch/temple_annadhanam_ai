@@ -31,8 +31,16 @@ READ_METHODS = {"GET", "HEAD", "OPTIONS"}
 
 
 class Role(StrEnum):
-    VIEWER = "viewer"
-    ADMIN = "admin"
+    VIEWER = "viewer"        # read the dashboards
+    OPERATOR = "operator"    # also: mark seats, run sessions, mark attendance
+    ADMIN = "admin"          # also: temples, halls, staff, cameras, configuration
+
+    @property
+    def rank(self) -> int:
+        return {"viewer": 0, "operator": 1, "admin": 2}[self.value]
+
+    def allows(self, needed: "Role") -> bool:
+        return self.rank >= needed.rank
 
 
 def _presented_key(request: Request) -> str | None:
@@ -59,34 +67,64 @@ def role_for(request: Request, settings: Settings) -> Role | None:
         return None
     if _matches(key, settings.admin_key_list):
         return Role.ADMIN
+    if _matches(key, settings.operator_key_list):
+        return Role.OPERATOR
     if _matches(key, settings.viewer_key_list):
         return Role.VIEWER
     return None
 
 
-def authorize(request: Request) -> Role:
-    """Router-level dependency: reads need a viewer key, writes an admin key."""
-    settings = get_settings()
-    role = role_for(request, settings)
+def _authenticate(request: Request) -> Role:
+    role = role_for(request, get_settings())
     if role is None:
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED,
             detail="A valid API key is required (Authorization: Bearer <key>).",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    if request.method not in READ_METHODS and role is not Role.ADMIN:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="This action needs an admin key.")
     request.state.role = role
     return role
 
 
+def _forbid(needed: Role) -> HTTPException:
+    return HTTPException(status.HTTP_403_FORBIDDEN, detail=f"This action needs an {needed.value} key."
+                         if needed is not Role.VIEWER else "Not allowed.")
+
+
+def role_guard(write_role: Role = Role.ADMIN, read_role: Role = Role.VIEWER):
+    """Dependency factory: reads need `read_role`, writes (POST/PUT/PATCH/DELETE) `write_role`."""
+    def guard(request: Request) -> Role:
+        role = _authenticate(request)
+        needed = read_role if request.method in READ_METHODS else write_role
+        if not role.allows(needed):
+            raise _forbid(needed)
+        return role
+    return guard
+
+
+def authorize(request: Request) -> Role:
+    """Default router dependency: reads need a viewer key, writes an admin key."""
+    return role_guard(Role.ADMIN)(request)
+
+
 RequireRole = Depends(authorize)
+# Day-to-day hall work (seat status, sessions, attendance): operators may write.
+RequireOperatorWrites = Depends(role_guard(Role.OPERATOR))
 
 
-def require_admin(role: Role = RequireRole) -> Role:
-    """For GET endpoints that expose sensitive configuration."""
-    if role is not Role.ADMIN:
-        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="This action needs an admin key.")
+def require_admin(request: Request) -> Role:
+    """Admin for every method (e.g. GET endpoints that expose sensitive data)."""
+    role = _authenticate(request)
+    if not role.allows(Role.ADMIN):
+        raise _forbid(Role.ADMIN)
+    return role
+
+
+def require_operator(request: Request) -> Role:
+    """Operator or admin for every method."""
+    role = _authenticate(request)
+    if not role.allows(Role.OPERATOR):
+        raise _forbid(Role.OPERATOR)
     return role
 
 

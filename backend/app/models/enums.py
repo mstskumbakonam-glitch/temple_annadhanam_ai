@@ -58,6 +58,51 @@ class OccupancyStatus(StrEnum):
     RELEASED = "RELEASED"
 
 
+class SeatStatus(StrEnum):
+    """Confirmed status of a seat. A seat is in exactly one status at a time, so
+    available + occupied + reserved (+ out of service) can never double count."""
+
+    AVAILABLE = "AVAILABLE"
+    OCCUPIED = "OCCUPIED"
+    RESERVED = "RESERVED"
+    OUT_OF_SERVICE = "OUT_OF_SERVICE"
+
+
+class SeatStatusSource(StrEnum):
+    MANUAL = "MANUAL"              # set by an operator
+    AI_CONFIRMED = "AI_CONFIRMED"  # an AI suggestion that an operator confirmed
+
+
+class SessionStatus(StrEnum):
+    SCHEDULED = "SCHEDULED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+
+class MealType(StrEnum):
+    BREAKFAST = "BREAKFAST"
+    LUNCH = "LUNCH"
+    DINNER = "DINNER"
+    PRASADAM = "PRASADAM"
+    SPECIAL = "SPECIAL"
+
+
+class StaffShift(StrEnum):
+    MORNING = "MORNING"
+    AFTERNOON = "AFTERNOON"
+    EVENING = "EVENING"
+    NIGHT = "NIGHT"
+    FULL_DAY = "FULL_DAY"
+
+
+class DailyAttendanceStatus(StrEnum):
+    PRESENT = "PRESENT"
+    HALF_DAY = "HALF_DAY"
+    ABSENT = "ABSENT"
+    LEAVE = "LEAVE"
+
+
 class AlertType(StrEnum):
     CROWD_DENSITY = "CROWD_DENSITY"        # a zone stayed at/above the alert density level
     QUEUE_CONGESTION = "QUEUE_CONGESTION"  # a queue zone stayed at/above its length limit
