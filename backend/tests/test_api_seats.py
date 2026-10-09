@@ -5,7 +5,8 @@ import pytest
 pytestmark = pytest.mark.db
 
 
-def test_create_seat(api_client, api_camera):
+def test_create_seat(api_client, api_camera, hall_factory):
+    hall_factory("MAIN")
     response = api_client.post(
         "/api/seats",
         json={
@@ -57,7 +58,8 @@ def test_duplicate_seat_in_same_hall_returns_409(api_client, api_seat):
     assert response.status_code == 409
 
 
-def test_same_seat_id_allowed_in_different_halls(api_client, api_seat):
+def test_same_seat_id_allowed_in_different_halls(api_client, api_seat, hall_factory):
+    hall_factory("HALL-B")
     response = api_client.post("/api/seats", json={"seat_id": "S01", "hall_id": "HALL-B"})
     assert response.status_code == 201
     assert response.json()["hall_id"] == "HALL-B"
@@ -181,3 +183,9 @@ def test_seat_history_person_type_filter(api_client, api_seat, session):
 
     assert api_client.get("/api/seats/history?person_type=VISITOR").json()["total"] == 1
     assert api_client.get("/api/seats/history?person_type=STAFF").json()["total"] == 0
+
+
+def test_seat_in_unknown_hall_is_404(api_client):
+    response = api_client.post("/api/seats", json={"seat_id": "S01", "hall_id": "NO-SUCH-HALL"})
+    assert response.status_code == 404
+    assert "Create the hall first" in response.json()["detail"]

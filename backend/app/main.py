@@ -37,6 +37,11 @@ Management API for a temple annadhanam (community meal) hall.
 
 TAGS_METADATA = [
     {"name": "Dashboard", "description": "Aggregated counters and hall occupancy."},
+    {"name": "Temples", "description": "Temples (each with one or more annadhanam halls)."},
+    {"name": "Halls", "description": "Annadhanam halls and their seat layouts."},
+    {"name": "Seat Management", "description": "Confirmed seat status: occupy, release, reserve."},
+    {"name": "Sessions", "description": "Annadhanam session scheduling (calendar)."},
+    {"name": "Reports", "description": "Reports from stored data, as JSON or CSV."},
     {"name": "Cameras", "description": "CCTV camera configuration and status."},
     {"name": "Visitors", "description": "Anonymous visitor sessions (read-only)."},
     {"name": "Staff", "description": "Registered staff records."},

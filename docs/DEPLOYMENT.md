@@ -6,8 +6,9 @@
 |---|---|---|
 | `GET /api/health` (liveness) | public | public (no secrets in it) |
 | All other `GET` (dashboard, cameras, alerts, history, preview, AI status, seats, visitors, DB health) | open | viewer **or** admin key |
-| `POST` / `PUT` / `DELETE` (cameras, RTSP URLs, lines/zones, seats, alert acknowledge) | open | **admin** key only |
-| Staff records (personal data) | open | **admin** key only, also for reading |
+| Seat status, sessions, attendance register | open | **operator** or admin key |
+| Other `POST` / `PUT` / `DELETE` (temples, halls, seat layouts, staff, cameras, RTSP URLs, lines/zones, alert acknowledge) | open | **admin** key only |
+| Staff records (personal data) | open | read: operator or admin (phone numbers admin only); write: admin |
 | Camera stream address (`rtsp_url_masked`) | shown | shown to admins only |
 | `/docs`, `/redoc`, `/openapi.json` | on | off when `APP_ENV=production` (override with `DOCS_ENABLED`) |
 
@@ -26,7 +27,7 @@ documented there). The ones that matter for safety:
 | Variable | Production value |
 |---|---|
 | `APP_ENV` | `production` |
-| `API_ADMIN_KEYS`, `API_VIEWER_KEYS` | long random values (`secrets.token_urlsafe(32)`), different per person or role, rotated when someone leaves |
+| `API_ADMIN_KEYS`, `API_OPERATOR_KEYS`, `API_VIEWER_KEYS` | long random values (`secrets.token_urlsafe(32)`), different per person or role, rotated when someone leaves |
 | `CORS_ORIGINS` | exact dashboard origin, e.g. `https://crowd.temple.example` |
 | `DATABASE_URL` | dedicated DB user with a strong password, not `postgres` |
 | `DEMO_MODE` | `false` |

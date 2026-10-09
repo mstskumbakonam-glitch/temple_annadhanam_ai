@@ -20,14 +20,16 @@ from app.models.enums import (
 )
 from app.models.events import CameraEvent, VisitorEvent
 from app.models.occupancy import SeatOccupancy
-from app.models.seat import Seat
+from app.models.schedule import AnnadhanamSession
+from app.models.seat import Seat, SeatStatusEvent
 from app.models.sequences import (
     STAFF_CODE_SEQUENCE,
     VISITOR_CODE_SEQUENCE,
     staff_code_seq,
     visitor_code_seq,
 )
-from app.models.staff import Staff, StaffAttendance
+from app.models.staff import Staff, StaffAttendance, StaffDailyAttendance
+from app.models.temple import AnnadhanamHall, Temple
 from app.models.visitor import Visitor
 
 __all__ = [
@@ -40,6 +42,11 @@ __all__ = [
     "Staff",
     "StaffAttendance",
     "Seat",
+    "SeatStatusEvent",
+    "Temple",
+    "AnnadhanamHall",
+    "AnnadhanamSession",
+    "StaffDailyAttendance",
     "SeatOccupancy",
     "VisitorEvent",
     "CameraEvent",

@@ -26,7 +26,7 @@ from sqlalchemy import select  # noqa: E402
 
 from app.config import get_settings  # noqa: E402
 from app.database import SessionLocal  # noqa: E402
-from app.models import Camera, Seat  # noqa: E402
+from app.models import AnnadhanamHall, Camera, Seat, Temple  # noqa: E402
 
 DEV_CAMERAS = [
     {"camera_id": "ANN-ENT-01", "camera_name": "Entrance", "location": "Main entrance"},
@@ -90,6 +90,17 @@ def seed(reset: bool = False) -> None:
                 print(f"camera  {spec['camera_id']}  exists, skipped")
             cameras[spec["camera_id"]] = camera
         session.flush()
+
+        # Seats need a real hall; a clearly labelled development placeholder is used.
+        temple = session.scalar(select(Temple).where(Temple.temple_code == "DEV-TEMPLE"))
+        if temple is None:
+            temple = Temple(temple_code="DEV-TEMPLE", name="Development temple (placeholder)", is_demo=True)
+            session.add(temple)
+            session.flush()
+        if session.scalar(select(AnnadhanamHall).where(AnnadhanamHall.hall_code == HALL_ID)) is None:
+            session.add(AnnadhanamHall(hall_code=HALL_ID, temple_id=temple.id, name="Development hall",
+                                       is_demo=True))
+            session.flush()
 
         hall_camera = cameras[SEAT_CAMERA]
         for spec in DEV_SEATS:

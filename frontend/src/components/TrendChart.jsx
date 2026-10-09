@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { num } from "../format.js";
+import { num } from "../lib/format.js";
 
 /**
  * People-count trend (average and peak per bucket) plus entries per bucket.

@@ -13,16 +13,29 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
-from fastapi import Depends
+from fastapi import Request
 
-from app.security import require_admin
+from app.security import Role, role_guard
 from app.api.deps import PaginationParams, TimeRangeParams, get_db
 from app.models.enums import AttendanceStatus
 from app.schemas.common import CameraCode, ErrorResponse, Page, StaffCode
 from app.schemas.staff import AttendanceRead, StaffCreate, StaffRead, StaffUpdate
 from app.services import staff_service
 
-router = APIRouter(prefix="/api/staff", tags=["Staff"], dependencies=[Depends(require_admin)])
+router = APIRouter(prefix="/api/staff", tags=["Staff"], dependencies=[Depends(role_guard(Role.ADMIN, read_role=Role.OPERATOR))])
+
+
+def _is_admin(request: Request) -> bool:
+    return getattr(request.state, "role", None) is Role.ADMIN
+
+
+def _read(session, staff, request: Request) -> StaffRead:
+    """Phone numbers are personal data: only admins receive them."""
+    from app.services.session_service import local_today
+    from app.config import get_settings
+
+    today = staff_service.today_statuses(session, [staff.id], local_today(get_settings().site_timezone))
+    return staff_service.to_read(staff, today.get(staff.id), show_phone=_is_admin(request))
 
 DbSession = Annotated[Session, Depends(get_db)]
 NOT_FOUND = {404: {"model": ErrorResponse, "description": "Staff not found"}}
@@ -52,20 +65,35 @@ def _attendance_page(result) -> Page[AttendanceRead]:
 
 @router.get("", response_model=Page[StaffRead], summary="List staff")
 def list_staff(
+    request: Request,
     session: DbSession,
     pagination: PaginationParams,
     active: bool | None = Query(None),
     department: str | None = Query(None, max_length=128),
+    search: str | None = Query(None, max_length=80),
+    temple_code: str | None = Query(None, max_length=32),
+    hall_code: str | None = Query(None, max_length=64),
+    shift: str | None = Query(None, max_length=16),
 ) -> Page[StaffRead]:
+    from app.config import get_settings
+    from app.services.session_service import local_today
+
     result = staff_service.list_staff(
         session,
         page=pagination.page,
         page_size=pagination.page_size,
         active=active,
         department=department,
+        search=search,
+        temple_code=temple_code.upper() if temple_code else None,
+        hall_code=hall_code.upper() if hall_code else None,
+        shift=shift.upper() if shift else None,
     )
+    today = staff_service.today_statuses(session, [s.id for s in result.items],
+                                         local_today(get_settings().site_timezone))
     return Page[StaffRead](
-        items=[StaffRead.model_validate(s) for s in result.items],
+        items=[staff_service.to_read(s, today.get(s.id), show_phone=_is_admin(request))
+               for s in result.items],
         page=result.page,
         page_size=result.page_size,
         total=result.total,
@@ -109,15 +137,15 @@ def list_attendance(
     summary="Register a staff member",
     description="staff_code (STAFF-001) is assigned by PostgreSQL, not by the client.",
 )
-def create_staff(payload: StaffCreate, session: DbSession) -> StaffRead:
-    return StaffRead.model_validate(staff_service.create_staff(session, payload))
+def create_staff(payload: StaffCreate, session: DbSession, request: Request) -> StaffRead:
+    return _read(session, staff_service.create_staff(session, payload), request)
 
 
 @router.get(
     "/{staff_code}", response_model=StaffRead, responses=NOT_FOUND, summary="Get one staff member"
 )
-def get_staff(staff_code: StaffCode, session: DbSession) -> StaffRead:
-    return StaffRead.model_validate(staff_service.get_by_code(session, staff_code))
+def get_staff(staff_code: StaffCode, session: DbSession, request: Request) -> StaffRead:
+    return _read(session, staff_service.get_by_code(session, staff_code), request)
 
 
 @router.put(
@@ -127,9 +155,9 @@ def get_staff(staff_code: StaffCode, session: DbSession) -> StaffRead:
     summary="Update a staff member",
 )
 def update_staff(
-    staff_code: StaffCode, payload: StaffUpdate, session: DbSession
+    staff_code: StaffCode, payload: StaffUpdate, session: DbSession, request: Request
 ) -> StaffRead:
-    return StaffRead.model_validate(staff_service.update_staff(session, staff_code, payload))
+    return _read(session, staff_service.update_staff(session, staff_code, payload), request)
 
 
 @router.delete(

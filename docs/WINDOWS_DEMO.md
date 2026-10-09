@@ -50,7 +50,20 @@ https://github.com/ultralytics/assets/releases (look under the v8.3.0 / v8.4.0 r
 and save it as `backend\models\yolo11n.pt`. (Read the licence note in
 TECHNOLOGY_REVIEW.md: Ultralytics models are AGPL-3.0.)
 
-## 4. Demo video
+## 4. Sample temples, halls and staff (optional)
+
+With `DEMO_MODE=true` in `backend\.env` (step 5), create clearly labelled sample records
+so every page has something to show:
+
+```powershell
+python ..\scripts\seed_management_demo.py          # --reset to recreate
+```
+
+They are named "Sample Temple A (demo)", "Sample Staff 1" and so on, and carry a
+"Sample data" badge. Before real use, delete them with `--remove`; it deletes only
+rows flagged as sample data.
+
+## 4b. Demo video (for the AI / CCTV monitoring page)
 
 Copy a video you are allowed to use into `backend\demo_videos\`, for example
 `backend\demo_videos\queue.mp4`. A few minutes of people walking through a gate or
@@ -79,7 +92,8 @@ SITE_TIMEZONE=Asia/Kolkata
 # Keys: generate two different values with
 #   python -c "import secrets; print(secrets.token_urlsafe(32))"
 API_VIEWER_KEYS=<paste first value>
-API_ADMIN_KEYS=<paste second value>
+API_OPERATOR_KEYS=<paste second value>
+API_ADMIN_KEYS=<paste third value>
 ```
 
 Leaving both key lines empty is possible on your own PC (the API is then open and the
@@ -103,9 +117,10 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 and paste the **viewer** key when asked. After 10–30 seconds
-(model load + first frames) the camera card shows the processed video with pixelated
-heads, the gate line with its IN arrow, zone levels, entries/exits and FPS.
+Open http://localhost:5173 and sign in with one of the keys. The admin key shows every
+action; the operator key is what hall staff use to mark seats, run sessions and take
+attendance; the viewer key is read-only. The AI / CCTV monitoring page shows the demo
+camera after 10–30 seconds (model load + first frames).
 
 ## 7. Adjust lines and zones for your video
 

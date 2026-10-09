@@ -14,6 +14,7 @@ SUMMARY_KEYS = {
     "staff_present",
     "total_seats",
     "occupied_seats",
+    "reserved_seats",
     "empty_seats",
     "occupancy_percentage",
 }
@@ -53,12 +54,17 @@ def test_summary_counts_seats_and_occupancy(api_client, api_seat, session):
     assert body["occupancy_percentage"] == 0.0
 
     seat = session.scalar(select(Seat).where(Seat.seat_id == "S01", Seat.hall_id == "MAIN"))
+    # An AI observation of a person on the seat is NOT a confirmed occupancy...
     visitor = Visitor()
     session.add(visitor)
     session.flush()
     session.add(SeatOccupancy(seat_id=seat.id, person_type="VISITOR", visitor_id=visitor.id))
     session.flush()
+    assert api_client.get("/api/dashboard/summary").json()["occupied_seats"] == 0
 
+    # ...an operator's confirmation is.
+    r = api_client.post("/api/halls/MAIN/seats/S01/status", json={"status": "OCCUPIED"})
+    assert r.status_code == 200, r.text
     body = api_client.get("/api/dashboard/summary").json()
     assert body["occupied_seats"] == 1
     assert body["empty_seats"] == 1
@@ -102,7 +108,8 @@ def test_hall_with_no_seats_returns_zero_not_division_error(api_client):
     assert body["occupancy_percentage"] == 0.0
 
 
-def test_hall_occupancy_percentage(api_client, api_camera):
+def test_hall_occupancy_percentage(api_client, api_camera, hall_factory):
+    hall_factory("HALL-X")
     for index in range(1, 5):
         api_client.post("/api/seats", json={"seat_id": f"S{index:02d}", "hall_id": "HALL-X"})
 
@@ -111,7 +118,9 @@ def test_hall_occupancy_percentage(api_client, api_camera):
     assert body["occupancy_percentage"] == 0.0
 
 
-def test_hall_occupancy_is_scoped_to_one_hall(api_client):
+def test_hall_occupancy_is_scoped_to_one_hall(api_client, hall_factory):
+    hall_factory("HALL-A")
+    hall_factory("HALL-B")
     api_client.post("/api/seats", json={"seat_id": "S01", "hall_id": "HALL-A"})
     api_client.post("/api/seats", json={"seat_id": "S01", "hall_id": "HALL-B"})
     api_client.post("/api/seats", json={"seat_id": "S02", "hall_id": "HALL-B"})

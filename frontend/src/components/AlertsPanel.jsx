@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { api } from "../services/api.js";
-import { ago, clock, dash, num } from "../format.js";
+import { api } from "../lib/api.js";
+import { ago, clock, dash, num } from "../lib/format.js";
 
 const TYPE_LABEL = { CROWD_DENSITY: "Crowd density", QUEUE_CONGESTION: "Queue congestion" };
 
