@@ -130,3 +130,39 @@ def test_recorded_video_runs_through_worker_and_counts_an_entry(tmp_path):
     finally:
         worker.stop()
     assert runtime.snapshot().analytics is None and runtime.preview() is None
+
+
+def test_tracking_restarts_at_every_loop_of_a_recorded_video(tmp_path):
+    """A person standing still must not be 'continued' across the cut: each pass
+    of the video is a new tracker session (the epoch travels with the frame)."""
+    write_video(tmp_path / "still.mp4", frames=6, size=(320, 240), fps=30)
+    handle = make_handle(FakeYoloModel(lambda i, f: [(100, 50, 140, 150, 0.9, 0)]))
+
+    def pipeline_factory(cfg):
+        return build_pipeline(
+            camera_id=cfg.camera_id, camera_db_id=cfg.db_id, handle=handle,
+            detector_settings=DetectorSettings(0.1, 0.5, 320, ("person",)),
+            tracker_settings=TrackerSettings(0.4, 0.1, 30), min_hits=1, persist_track_events=True,
+        )
+
+    settings = SimpleNamespace(camera_rtsp_transport="tcp", demo_mode=True, demo_video_path=tmp_path)
+    sink = InMemoryEventSink()
+    worker = CameraWorker(
+        CameraConfig(1, "LOOP", "Loop", "demo://still.mp4"),
+        WorkerSettings(process_fps=30, heartbeat_seconds=60),
+        pipeline_factory=pipeline_factory, source_factory=build_source_factory(settings),
+        sink=sink, runtime=CameraRuntime("LOOP"),
+    )
+    worker.start()
+
+    def sessions():
+        return {r.metadata["tracker_session"] for r in sink.records
+                if isinstance(r, TrackEventRecord) and r.event_type is VisitorEventType.DETECTED}
+
+    try:
+        assert wait_until(lambda: len(sessions()) >= 3, timeout=10)
+    finally:
+        worker.stop()
+    lost = [r for r in sink.records
+            if isinstance(r, TrackEventRecord) and r.event_type is VisitorEventType.LOST]
+    assert lost and all(r.metadata["reason"] == "tracker_session_ended" for r in lost)

@@ -133,6 +133,7 @@ class CameraWorker:
 
         self._stop = threading.Event()
         self._reset_tracking = threading.Event()
+        self._epoch = 0          # written by the capture thread only
         self._link = _Link.INITIAL
         self._pipeline: "DetectionPipeline | None" = None
         self._capture_thread: threading.Thread | None = None
@@ -293,14 +294,15 @@ class CameraWorker:
                     jumped = getattr(source, "consume_discontinuity", None)
                     if jumped is not None and jumped():
                         # Recorded video looped: frames before and after the cut are
-                        # unrelated, so tracks must not continue across it.
-                        self.buffer.clear()
-                        self._reset_tracking.set()
+                        # unrelated. The new epoch travels WITH the frame, so the AI
+                        # thread resets tracking before it processes the first frame
+                        # after the cut (a flag alone would race with the frame).
+                        self._epoch += 1
                     if accept_gap and now - last_put < accept_gap:
                         continue
                     last_put = now
                     stamp = self._wall()
-                    self.buffer.put(frame, stamp)
+                    self.buffer.put(frame, stamp, epoch=self._epoch)
                     meter.tick()
                     self._frames_captured += 1
                     self.runtime.update(
@@ -352,6 +354,7 @@ class CameraWorker:
 
     # ------------------------------------------------- connection transitions
     def _connected(self) -> None:
+        self._epoch += 1         # a new connection is a new, unrelated video segment
         prior, self._link = self._link, _Link.ONLINE
         recovered = prior is not _Link.INITIAL
         if recovered:
@@ -408,6 +411,7 @@ class CameraWorker:
         pacer = ProcessingPacer(self.settings.process_fps, self._clock)
         meter = RateMeter(window=10, stale_after=5.0, clock=self._clock)
         last_sequence = 0
+        current_epoch: int | None = None
         processed = rejected = 0
         last_detection = None
         # First DB heartbeat shortly after frames start flowing (not a full interval
@@ -438,6 +442,11 @@ class CameraWorker:
             if self._clock() - packet.monotonic > max_age:
                 last_sequence = packet.sequence         # too old to be meaningful
                 continue
+
+            if current_epoch is not None and packet.epoch != current_epoch:
+                # Discontinuity (loop / reconnect): close the old tracker session first.
+                self._handle_reset(pipeline)
+            current_epoch = packet.epoch
 
             pacer.mark_started()
             meter.tick()          # rate is measured at frame START, like the cap itself

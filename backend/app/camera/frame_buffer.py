@@ -27,6 +27,9 @@ class FramePacket:
     sequence: int           # 1, 2, 3... per buffer, strictly increasing
     timestamp: datetime     # UTC capture time
     monotonic: float        # monotonic capture time, for latency/staleness maths
+    # Continuity epoch: changes when the video jumps (stream reconnected, demo
+    # video looped). Frames from different epochs must never share a track.
+    epoch: int = 0
 
 
 class LatestFrameBuffer:
@@ -65,7 +68,7 @@ class LatestFrameBuffer:
             return self._dropped
 
     # ------------------------------------------------------------------ write
-    def put(self, frame: Any, timestamp: datetime | None = None) -> FramePacket:
+    def put(self, frame: Any, timestamp: datetime | None = None, epoch: int = 0) -> FramePacket:
         """Store a new frame, discarding the oldest when full."""
         try:
             frame.flags.writeable = False  # shared between threads: forbid mutation
@@ -84,6 +87,7 @@ class LatestFrameBuffer:
                 sequence=self._sequence,
                 timestamp=timestamp or utc_now(),
                 monotonic=time.monotonic(),
+                epoch=epoch,
             )
             self._frames.append(packet)
             self._condition.notify_all()
