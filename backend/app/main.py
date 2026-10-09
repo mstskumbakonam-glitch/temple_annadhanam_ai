@@ -14,6 +14,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api import ALL_ROUTERS, register_exception_handlers
 from app.config import get_settings
 from app.database import SessionLocal, check_database_connection
+from app.security import install_http_guards
 from app.utils.logs import install_log_redaction
 
 settings = get_settings()
@@ -42,6 +43,7 @@ TAGS_METADATA = [
     {"name": "Attendance", "description": "Staff presence sessions."},
     {"name": "Seats", "description": "Seat configuration, live status and history."},
     {"name": "Events", "description": "Visitor and camera event history (read-only)."},
+    {"name": "Crowd Analytics", "description": "Entry/exit lines, zone density, queues, alerts, history."},
     {"name": "AI Runtime", "description": "Live AI pipeline and camera worker status (read-only)."},
     {"name": "system", "description": "Health checks."},
 ]
@@ -51,6 +53,14 @@ TAGS_METADATA = [
 async def lifespan(app: FastAPI):
     logger.info("Starting %s v%s (%s)", settings.app_name, settings.app_version, settings.app_env)
     logger.info("Database: %s", settings.safe_database_url)
+    if not settings.auth_enabled:
+        logger.warning(
+            "API authentication is OFF (no API_VIEWER_KEYS / API_ADMIN_KEYS). "
+            "Acceptable on a development machine only; never expose this API."
+        )
+    if settings.demo_mode:
+        logger.warning("DEMO_MODE is on: demo:// cameras play RECORDED video (%s)",
+                       settings.demo_video_path.name)
 
     result = check_database_connection()
     if result["status"] == "ok":
@@ -86,17 +96,20 @@ app = FastAPI(
     description=DESCRIPTION,
     openapi_tags=TAGS_METADATA,
     lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
+    docs_url="/docs" if settings.docs_visible else None,
+    redoc_url="/redoc" if settings.docs_visible else None,
+    openapi_url="/openapi.json" if settings.docs_visible else None,
 )
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origin_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    # Auth uses bearer keys, never cookies, so credentialed CORS is not needed.
+    allow_credentials=False,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "X-API-Key"],
 )
+install_http_guards(app, settings)
 
 register_exception_handlers(app)
 

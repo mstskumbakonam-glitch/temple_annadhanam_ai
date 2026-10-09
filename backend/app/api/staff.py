@@ -13,13 +13,16 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
+from fastapi import Depends
+
+from app.security import require_admin
 from app.api.deps import PaginationParams, TimeRangeParams, get_db
 from app.models.enums import AttendanceStatus
 from app.schemas.common import CameraCode, ErrorResponse, Page, StaffCode
 from app.schemas.staff import AttendanceRead, StaffCreate, StaffRead, StaffUpdate
 from app.services import staff_service
 
-router = APIRouter(prefix="/api/staff", tags=["Staff"])
+router = APIRouter(prefix="/api/staff", tags=["Staff"], dependencies=[Depends(require_admin)])
 
 DbSession = Annotated[Session, Depends(get_db)]
 NOT_FOUND = {404: {"model": ErrorResponse, "description": "Staff not found"}}

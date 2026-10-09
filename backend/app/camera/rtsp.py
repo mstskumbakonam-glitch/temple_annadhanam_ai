@@ -29,6 +29,16 @@ class CameraConfig:
     camera_id: str                              # display code, e.g. ANN-ENT-01
     camera_name: str
     rtsp_url: str = field(repr=False, compare=True)   # secret: hidden from repr()
+    # Canonical JSON of cameras.analytics_config ("" = none). A string, so the
+    # frozen config stays hashable; a change restarts the worker with new zones.
+    analytics_json: str = ""
+
+    @property
+    def source_kind(self) -> str:
+        """'recorded' for demo:// video files, 'live' for real camera streams."""
+        from app.camera.video_file import is_demo_url
+
+        return "recorded" if is_demo_url(self.rtsp_url) else "live"
 
     @property
     def safe_url(self) -> str:
@@ -119,3 +129,28 @@ class OpenCvFrameSource:
 def opencv_source_factory(transport: str = "tcp") -> FrameSourceFactory:
     configure_opencv_capture(transport)
     return lambda url: OpenCvFrameSource(url)
+
+
+def build_source_factory(settings: Any) -> FrameSourceFactory:
+    """Live RTSP sources, plus demo:// recorded video when DEMO_MODE is on."""
+    from app.camera.video_file import (
+        DemoSourceError,
+        VideoFileFrameSource,
+        _RefusingSource,
+        is_demo_url,
+        resolve_demo_path,
+    )
+
+    live = opencv_source_factory(settings.camera_rtsp_transport)
+
+    def factory(url: str) -> FrameSource:
+        if not is_demo_url(url):
+            return live(url)
+        if not settings.demo_mode:
+            return _RefusingSource("demo sources are disabled (DEMO_MODE=false)")
+        try:
+            return VideoFileFrameSource(resolve_demo_path(url, settings.demo_video_path))
+        except DemoSourceError as exc:
+            return _RefusingSource(str(exc))
+
+    return factory

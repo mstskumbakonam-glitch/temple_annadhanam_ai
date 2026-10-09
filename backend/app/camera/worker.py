@@ -55,6 +55,7 @@ class WorkerSettings:
     stats_log_seconds: float = 10.0
     join_timeout: float = 10.0
     poll_interval: float = 0.02         # sleep after a failed read / while waiting for frames
+    keep_preview: bool = False          # hold the last processed frame for /preview.jpg
 
     @classmethod
     def from_settings(cls, settings: "Settings") -> "WorkerSettings":
@@ -66,6 +67,7 @@ class WorkerSettings:
             max_reconnect_delay=settings.camera_max_reconnect_delay,
             max_capture_fps=settings.camera_max_capture_fps,
             heartbeat_seconds=settings.camera_heartbeat_seconds,
+            keep_preview=settings.preview_enabled,
         )
 
 
@@ -160,6 +162,7 @@ class CameraWorker:
             connected=False,
             connection_state=Connection.CONNECTING,
             tracker_session=self._pipeline.tracker_session,
+            source_kind=self.config.source_kind,
             last_error=None,
         )
         # Until the stream connects, the camera is not online for our purposes.
@@ -201,8 +204,10 @@ class CameraWorker:
         self.runtime.update(
             ai_running=False, connected=False, connection_state=Connection.STOPPED,
             person_count=None, active_tracks=None, processing_fps=None, capture_fps=None,
+            analytics=None, inference_ms=None,
         )
         self.runtime.set_tracks(())
+        self.runtime.clear_preview()
         log_event(logger, logging.INFO, "AI", self.camera_id, "stopped")
 
     def _close_open_tracks(self) -> None:
@@ -364,6 +369,7 @@ class CameraWorker:
         self._emit(CameraEventType.OFFLINE, f"stream lost: {reason}")
         self._sink.submit(CameraStatusRecord(self.config.db_id, CameraStatus.OFFLINE))
         self.buffer.clear()              # never process frames from before the gap
+        self.runtime.clear_preview()
         self._reset_tracking.set()       # the AI thread closes the tracker session (events)
         # Clear the visible state in the same step as the counts, so a reader never
         # sees "person_count=None" next to a list of stale tracks.
@@ -457,7 +463,11 @@ class CameraWorker:
                 rejected_detections=rejected,
                 last_detection_timestamp=last_detection,
                 tracker_session=pipeline.tracker_session,
+                inference_ms=round(result.inference_seconds * 1000, 1),
+                analytics=pipeline.analytics_snapshot(),
             )
+            if self.settings.keep_preview and result.tracking is not None:
+                self.runtime.set_preview(packet.frame, result.tracking.tracks, packet.timestamp)
 
             now = self._clock()
             if now >= next_stats:
@@ -476,7 +486,8 @@ class CameraWorker:
             self._sink.submit(record)
         self.runtime.set_tracks(())
         self.runtime.update(
-            person_count=None, active_tracks=None, tracker_session=pipeline.tracker_session)
+            person_count=None, active_tracks=None, tracker_session=pipeline.tracker_session,
+            analytics=pipeline.analytics_snapshot())
 
     def _heartbeat(self) -> None:
         """Refresh cameras.last_frame_time / fps occasionally, not per frame."""

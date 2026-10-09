@@ -4,9 +4,12 @@ Every model is imported here so that Base.metadata is fully populated before
 Alembic autogenerate compares it against the live database.
 """
 
+from app.models.analytics import CrowdAlert, CrowdCountSnapshot
 from app.models.base import Base, CreatedAtMixin, TimestampMixin, bigint_pk
 from app.models.camera import Camera
 from app.models.enums import (
+    AlertSeverity,
+    AlertType,
     AttendanceStatus,
     CameraEventType,
     CameraStatus,
@@ -40,6 +43,10 @@ __all__ = [
     "SeatOccupancy",
     "VisitorEvent",
     "CameraEvent",
+    "CrowdAlert",
+    "CrowdCountSnapshot",
+    "AlertType",
+    "AlertSeverity",
     "CameraStatus",
     "CameraEventType",
     "VisitorStatus",

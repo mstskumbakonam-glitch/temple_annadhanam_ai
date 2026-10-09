@@ -196,6 +196,8 @@ def api_client(session):
         yield session
 
     app.dependency_overrides[get_db] = _override
+    for limiter in getattr(app.state, "rate_limiters", ()):
+        limiter.reset()   # each test starts with a fresh rate-limit window
     with TestClient(app) as client:
         yield client
     app.dependency_overrides.clear()

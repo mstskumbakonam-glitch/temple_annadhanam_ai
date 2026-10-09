@@ -51,6 +51,8 @@ class Settings(BaseSettings):
     app_env: str = "development"
     log_level: str = "INFO"
     cors_origins: str = "http://localhost:5173"
+    # Local time zone of the temple: decides where "today" starts for daily totals.
+    site_timezone: str = "Asia/Kolkata"
 
     # ---- Database (PostgreSQL only) ----
     database_url: str = Field(..., description=f"{REQUIRED_DB_PREFIX}user:password@host:port/db")
@@ -91,6 +93,30 @@ class Settings(BaseSettings):
     camera_rtsp_transport: str = "tcp"                           # tcp is more reliable than udp
     camera_heartbeat_seconds: float = Field(default=30.0, gt=0.0)  # DB last_frame_time refresh
 
+    ai_persist_count_history: bool = True                        # per-minute count rows
+
+    # ---- Demo mode (recorded video through the real pipeline) ----
+    # Cameras with rtsp_url demo://<file> play <DEMO_VIDEO_DIR>/<file> in a loop.
+    # Results are real detections on RECORDED footage and are labelled as such.
+    demo_mode: bool = False
+    demo_video_dir: str = "demo_videos"                          # relative to backend/
+
+    # ---- Processed-frame preview (annotated JPEG per camera) ----
+    preview_enabled: bool = False
+    preview_anonymize: bool = True        # pixelate the head region of every person box
+    preview_max_width: int = Field(default=960, ge=160, le=3840)
+
+    # ---- API security ----
+    # Comma-separated keys. Viewer keys may read; admin keys may also change
+    # configuration. Generate with:  python -c "import secrets; print(secrets.token_urlsafe(32))"
+    # With no keys set the API is OPEN, which is allowed only outside production.
+    api_viewer_keys: str = ""
+    api_admin_keys: str = ""
+    docs_enabled: bool | None = None      # default: on in development, off in production
+    rate_limit_per_minute: int = Field(default=600, ge=0)        # per client, 0 = off
+    rate_limit_writes_per_minute: int = Field(default=60, ge=0)  # POST/PUT/DELETE
+    trusted_proxy_count: int = Field(default=0, ge=0, le=5)      # X-Forwarded-For hops to trust
+
     # ---- Face recognition (registered staff only) ----
     face_match_threshold: float = 0.45
 
@@ -110,6 +136,20 @@ class Settings(BaseSettings):
         if value is None or not value.strip():
             return None
         return validate_postgres_url(value, "TEST_DATABASE_URL")
+
+    @field_validator("site_timezone")
+    @classmethod
+    def _check_timezone(cls, value: str) -> str:
+        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+
+        try:
+            ZoneInfo(value.strip())
+        except (ZoneInfoNotFoundError, ValueError) as exc:
+            raise ValueError(
+                f"SITE_TIMEZONE '{value}' is not a known IANA time zone (e.g. Asia/Kolkata). "
+                "On Windows install the 'tzdata' package."
+            ) from exc
+        return value.strip()
 
     @field_validator("ai_device")
     @classmethod
@@ -132,7 +172,43 @@ class Settings(BaseSettings):
             )
         if self.camera_rtsp_transport.lower() not in {"tcp", "udp"}:
             raise ValueError("CAMERA_RTSP_TRANSPORT must be 'tcp' or 'udp'.")
+        if self.is_production:
+            if not self.api_admin_keys.strip():
+                raise ValueError(
+                    "APP_ENV=production requires API_ADMIN_KEYS (and normally API_VIEWER_KEYS). "
+                    "An unauthenticated API must not be deployed."
+                )
+            if "*" in self.cors_origin_list:
+                raise ValueError("CORS_ORIGINS='*' is not allowed in production.")
+            weak = [k for k in self.viewer_key_list + self.admin_key_list if len(k) < 24]
+            if weak:
+                raise ValueError("API keys must be at least 24 characters in production.")
         return self
+
+    @property
+    def is_production(self) -> bool:
+        return self.app_env.strip().lower() in {"production", "prod"}
+
+    @property
+    def viewer_key_list(self) -> list[str]:
+        return [k.strip() for k in self.api_viewer_keys.split(",") if k.strip()]
+
+    @property
+    def admin_key_list(self) -> list[str]:
+        return [k.strip() for k in self.api_admin_keys.split(",") if k.strip()]
+
+    @property
+    def auth_enabled(self) -> bool:
+        return bool(self.viewer_key_list or self.admin_key_list)
+
+    @property
+    def docs_visible(self) -> bool:
+        return self.docs_enabled if self.docs_enabled is not None else not self.is_production
+
+    @property
+    def demo_video_path(self) -> Path:
+        path = Path(self.demo_video_dir).expanduser()
+        return path if path.is_absolute() else Path(__file__).resolve().parent.parent / path
 
     @property
     def ai_target_class_list(self) -> list[str]:

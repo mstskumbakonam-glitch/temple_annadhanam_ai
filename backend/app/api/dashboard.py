@@ -7,12 +7,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.security import RequireRole
 from app.api.deps import get_db
 from app.schemas.common import HallCode
 from app.schemas.dashboard import DashboardSummary, HallOccupancy
 from app.services import dashboard_service
 
-router = APIRouter(tags=["Dashboard"])
+router = APIRouter(tags=["Dashboard"], dependencies=[RequireRole])
 
 DbSession = Annotated[Session, Depends(get_db)]
 

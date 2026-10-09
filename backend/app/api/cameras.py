@@ -8,9 +8,10 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Response, status
+from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlalchemy.orm import Session
 
+from app.security import RequireRole, Role
 from app.api.deps import PaginationParams, TimeRangeParams, get_db
 from app.models.enums import CameraEventType, CameraStatus
 from app.schemas.ai import CameraAIStatus
@@ -19,9 +20,18 @@ from app.schemas.common import CameraCode, ErrorResponse, Page
 from app.schemas.event import CameraEventRead
 from app.services import ai_status_service, camera_service, event_service
 
-router = APIRouter(prefix="/api/cameras", tags=["Cameras"])
+router = APIRouter(prefix="/api/cameras", tags=["Cameras"], dependencies=[RequireRole])
 
 DbSession = Annotated[Session, Depends(get_db)]
+
+def _read(camera, request: Request) -> CameraRead:
+    """Camera as the caller may see it: the (already masked) stream URL still
+    reveals the camera's network address and user name, so only admins get it."""
+    data = CameraRead.model_validate(camera)
+    if getattr(request.state, "role", None) is not Role.ADMIN:
+        data = data.model_copy(update={"rtsp_url_masked": None})
+    return data
+
 
 NOT_FOUND = {404: {"model": ErrorResponse, "description": "Camera not found"}}
 CONFLICT = {409: {"model": ErrorResponse, "description": "Camera code already exists"}}
@@ -34,6 +44,7 @@ CONFLICT = {409: {"model": ErrorResponse, "description": "Camera code already ex
     description="Paginated list of configured cameras, optionally filtered by status.",
 )
 def list_cameras(
+    request: Request,
     session: DbSession,
     pagination: PaginationParams,
     status_filter: CameraStatus | None = Query(None, alias="status"),
@@ -47,7 +58,7 @@ def list_cameras(
         enabled=enabled,
     )
     return Page[CameraRead](
-        items=[CameraRead.model_validate(c) for c in result.items],
+        items=[_read(c, request) for c in result.items],
         page=result.page,
         page_size=result.page_size,
         total=result.total,
@@ -72,8 +83,8 @@ def camera_status(session: DbSession) -> list[CameraStatusRead]:
     summary="Add a camera",
     description="Register a camera. RTSP credentials are stored but never returned.",
 )
-def create_camera(payload: CameraCreate, session: DbSession) -> CameraRead:
-    return CameraRead.model_validate(camera_service.create_camera(session, payload))
+def create_camera(payload: CameraCreate, session: DbSession, request: Request) -> CameraRead:
+    return _read(camera_service.create_camera(session, payload), request)
 
 
 @router.get(
@@ -82,8 +93,8 @@ def create_camera(payload: CameraCreate, session: DbSession) -> CameraRead:
     responses=NOT_FOUND,
     summary="Get one camera",
 )
-def get_camera(camera_id: CameraCode, session: DbSession) -> CameraRead:
-    return CameraRead.model_validate(camera_service.get_by_code(session, camera_id))
+def get_camera(camera_id: CameraCode, session: DbSession, request: Request) -> CameraRead:
+    return _read(camera_service.get_by_code(session, camera_id), request)
 
 
 @router.put(
@@ -94,9 +105,9 @@ def get_camera(camera_id: CameraCode, session: DbSession) -> CameraRead:
     description="Partial update: only the fields supplied are changed.",
 )
 def update_camera(
-    camera_id: CameraCode, payload: CameraUpdate, session: DbSession
+    camera_id: CameraCode, payload: CameraUpdate, session: DbSession, request: Request
 ) -> CameraRead:
-    return CameraRead.model_validate(camera_service.update_camera(session, camera_id, payload))
+    return _read(camera_service.update_camera(session, camera_id, payload), request)
 
 
 @router.delete(

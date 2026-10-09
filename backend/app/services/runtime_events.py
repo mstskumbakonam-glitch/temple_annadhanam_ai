@@ -22,9 +22,11 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Protocol, Union
 
+from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
-from app.models import Camera, CameraEvent, VisitorEvent
+from app.models import Camera, CameraEvent, CrowdAlert, CrowdCountSnapshot, VisitorEvent
 from app.models.enums import CameraEventType, CameraStatus, VisitorEventType
 from app.utils.logs import redact_text
 
@@ -75,7 +77,41 @@ class TrackEventRecord:
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
-Record = Union[CameraEventRecord, CameraStatusRecord, TrackEventRecord]
+@dataclass(frozen=True)
+class AlertRecord:
+    """A crowd alert transition. RAISE inserts the row; ESCALATE and CLEAR update it
+    (matched by alert_id), so one alert is always exactly one row."""
+
+    alert_id: str
+    action: str                 # RAISE | ESCALATE | CLEAR
+    camera_db_id: int
+    alert_type: str
+    zone_id: str | None
+    severity: str
+    started_at: datetime
+    ended_at: datetime | None = None
+    peak_value: float | None = None
+    threshold: float | None = None
+    message: str | None = None
+    metadata: dict[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class CountSnapshotRecord:
+    """One minute of counts. Re-submitting the same (camera, zone, minute) MERGES
+    into the existing row (sample-weighted), e.g. after a reconnect mid-minute."""
+
+    camera_db_id: int
+    zone_id: str
+    bucket_start: datetime
+    samples: int
+    avg_count: float
+    max_count: int
+    entries: int = 0
+    exits: int = 0
+
+
+Record = Union[CameraEventRecord, CameraStatusRecord, TrackEventRecord, AlertRecord, CountSnapshotRecord]
 
 
 class EventSink(Protocol):
@@ -265,5 +301,50 @@ class DatabaseEventWriter:
                     event_metadata=record.metadata,
                 )
             )
+        elif isinstance(record, AlertRecord):
+            DatabaseEventWriter._apply_alert(session, record)
+        elif isinstance(record, CountSnapshotRecord):
+            table = CrowdCountSnapshot.__table__
+            stmt = pg_insert(table).values(
+                camera_id=record.camera_db_id, zone_id=record.zone_id,
+                bucket_start=record.bucket_start, samples=record.samples,
+                avg_count=record.avg_count, max_count=record.max_count,
+                entries=record.entries, exits=record.exits,
+            )
+            ex = stmt.excluded
+            stmt = stmt.on_conflict_do_update(
+                index_elements=["camera_id", "zone_id", "bucket_start"],
+                set_={
+                    "avg_count": (table.c.avg_count * table.c.samples + ex.avg_count * ex.samples)
+                    / (table.c.samples + ex.samples),
+                    "samples": table.c.samples + ex.samples,
+                    "max_count": func.greatest(table.c.max_count, ex.max_count),
+                    "entries": table.c.entries + ex.entries,
+                    "exits": table.c.exits + ex.exits,
+                },
+            )
+            session.execute(stmt)
         else:  # pragma: no cover - guards future record types
             raise TypeError(f"unsupported record type {type(record).__name__}")
+
+    @staticmethod
+    def _apply_alert(session: Session, record: AlertRecord) -> None:
+        row = session.scalar(select(CrowdAlert).where(CrowdAlert.alert_uid == record.alert_id))
+        if row is None:
+            if session.get(Camera, record.camera_db_id) is None:
+                return  # camera deleted meanwhile
+            row = CrowdAlert(
+                alert_uid=record.alert_id, camera_id=record.camera_db_id,
+                zone_id=record.zone_id, alert_type=record.alert_type,
+                started_at=record.started_at, threshold=record.threshold,
+            )
+            session.add(row)
+        row.severity = record.severity
+        row.message = redact_text(record.message)[:500] if record.message else row.message
+        if record.peak_value is not None:
+            row.peak_value = max(row.peak_value or 0.0, record.peak_value)
+        if record.action == "CLEAR":
+            row.ended_at = record.ended_at
+        if record.metadata:
+            row.event_metadata = {**(row.event_metadata or {}), **record.metadata}
+

@@ -51,6 +51,9 @@ class CameraRuntimeSnapshot:
     last_error: str | None = None
     started_at: datetime | None = None
     tracker_session: str | None = None
+    source_kind: str = "live"             # "live" camera or "recorded" demo video
+    inference_ms: float | None = None     # model time for the last processed frame
+    analytics: Any = None                 # app.ai.analytics.AnalyticsSnapshot | None
 
 
 _FIELD_NAMES = {f.name for f in fields(CameraRuntimeSnapshot)}
@@ -64,6 +67,7 @@ class CameraRuntime:
         self._lock = threading.Lock()
         self._snapshot = CameraRuntimeSnapshot(camera_id=camera_id)
         self._tracks: tuple[TrackedObject, ...] = ()
+        self._preview: tuple[Any, tuple[TrackedObject, ...], datetime] | None = None
 
     def update(self, **changes: Any) -> None:
         unknown = set(changes) - _FIELD_NAMES
@@ -89,6 +93,19 @@ class CameraRuntime:
     def latest_tracks(self) -> tuple[TrackedObject, ...]:
         with self._lock:
             return self._tracks
+
+    # -- latest processed frame, kept only when PREVIEW_ENABLED --------------
+    def set_preview(self, frame: Any, tracks: tuple[TrackedObject, ...], when: datetime) -> None:
+        with self._lock:
+            self._preview = (frame, tracks, when)
+
+    def clear_preview(self) -> None:
+        with self._lock:
+            self._preview = None
+
+    def preview(self) -> tuple[Any, tuple[TrackedObject, ...], datetime] | None:
+        with self._lock:
+            return self._preview
 
 
 class RuntimeRegistry:

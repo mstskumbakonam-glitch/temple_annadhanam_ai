@@ -24,6 +24,8 @@ EXPECTED_TABLES = {
     "seat_occupancy",
     "visitor_events",
     "camera_events",
+    "crowd_alerts",
+    "crowd_count_snapshots",
 }
 
 PHASE2_REVISION = "6bce95798004"
@@ -46,6 +48,7 @@ def alembic_cfg(test_database_url):
 
 PHASE3_REVISION = "de2d51593dcd"
 PHASE5_REVISION = "ab4842faaacb"
+PHASE5B_REVISION = "c7d1a2e5f901"   # crowd analytics (additive)
 
 
 def test_revision_history_is_linear_from_phase2_to_head():
@@ -61,6 +64,7 @@ def test_revision_history_is_linear_from_phase2_to_head():
     assert chain[-2:][0] == PHASE3_REVISION
     assert script.get_revision(PHASE3_REVISION).down_revision == PHASE2_REVISION
     assert script.get_revision(PHASE5_REVISION).down_revision == PHASE3_REVISION
+    assert script.get_revision(PHASE5B_REVISION).down_revision == PHASE5_REVISION
     assert heads[0] == chain[0]
 
 
@@ -203,9 +207,21 @@ def test_no_pending_model_drift(alembic_cfg, test_engine):
 
 
 # ---------------------------------------------------------------- Phase 5
-def test_head_is_the_phase5_revision():
+def test_head_is_the_phase5b_revision():
     script = ScriptDirectory.from_config(Config(str(BACKEND_DIR / "alembic.ini")))
-    assert script.get_heads() == [PHASE5_REVISION]
+    assert script.get_heads() == [PHASE5B_REVISION]
+
+
+def test_phase5b_downgrade_drops_only_analytics_objects(alembic_cfg, test_engine):
+    command.upgrade(alembic_cfg, "head")
+    command.downgrade(alembic_cfg, PHASE5_REVISION)
+    insp = inspect(test_engine)
+    tables = set(insp.get_table_names())
+    assert "crowd_alerts" not in tables and "crowd_count_snapshots" not in tables
+    assert "analytics_config" not in {c["name"] for c in insp.get_columns("cameras")}
+    assert "camera_events" in tables
+    command.upgrade(alembic_cfg, "head")
+    assert {"crowd_alerts", "crowd_count_snapshots"} <= set(inspect(test_engine).get_table_names())
 
 
 def test_camera_event_constraint_matches_the_enum(alembic_cfg, test_engine):

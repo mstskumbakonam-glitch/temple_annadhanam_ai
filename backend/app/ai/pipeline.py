@@ -15,6 +15,8 @@ from dataclasses import replace
 from datetime import datetime
 from typing import Any
 
+from app.ai.analytics import AnalyticsSnapshot, CrowdAnalyticsProcessor
+from app.ai.analytics_config import AnalyticsConfig
 from app.ai.detector import YoloDetector, is_usable_frame
 from app.ai.pipeline_types import PipelineResult
 from app.ai.processor import FrameProcessor, TrackLifecycleProcessor
@@ -45,6 +47,18 @@ class DetectionPipeline:
         self.tracker = tracker
         self._processors = list(processors)
         self._high_confidence = high_confidence
+
+    @property
+    def analytics(self) -> CrowdAnalyticsProcessor | None:
+        """The crowd-analytics processor, if this pipeline has one."""
+        for processor in self._processors:
+            if isinstance(processor, CrowdAnalyticsProcessor):
+                return processor
+        return None
+
+    def analytics_snapshot(self) -> AnalyticsSnapshot | None:
+        analytics = self.analytics
+        return analytics.snapshot() if analytics else None
 
     def add_processor(self, processor: FrameProcessor) -> None:
         """Register another processor (Phase 6 extension point)."""
@@ -88,6 +102,7 @@ class DetectionPipeline:
             tracking=tracking,
             inference_seconds=self.detector.last_inference_seconds,
             rejected_detections=self.detector.rejected_total - rejected_before,
+            frame_shape=(int(packet.frame.shape[0]), int(packet.frame.shape[1])),
         )
         return self._with_events(result)
 
@@ -135,6 +150,8 @@ def build_pipeline(
     tracker_settings: Any,
     min_hits: int,
     persist_track_events: bool,
+    analytics_config: AnalyticsConfig | None = None,
+    persist_count_history: bool = True,
 ) -> DetectionPipeline:
     """Assemble one camera's pipeline around the shared, already-loaded model."""
     detector = YoloDetector(handle, detector_settings)
@@ -142,7 +159,11 @@ def build_pipeline(
     processors = [
         TrackLifecycleProcessor(
             camera_db_id, min_hits=min_hits, enabled=persist_track_events
-        )
+        ),
+        CrowdAnalyticsProcessor(
+            camera_db_id, camera_id, analytics_config or AnalyticsConfig(),
+            persist_snapshots=persist_count_history,
+        ),
     ]
     return DetectionPipeline(
         camera_id,

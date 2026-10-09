@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import CheckConstraint, DateTime, Index, Integer, String, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base, TimestampMixin, bigint_pk
@@ -42,6 +43,9 @@ class Camera(Base, TimestampMixin):
         String(16), nullable=False, server_default=text("'OFFLINE'")
     )
     fps: Mapped[float | None] = mapped_column()
+    # Lines, zones and alert thresholds (app.ai.analytics_config). Normalised
+    # coordinates, so a resolution change does not invalidate them.
+    analytics_config: Mapped[dict[str, Any] | None] = mapped_column(JSONB(none_as_null=True))
     last_frame_time: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     # --- Relationships (no cascade delete: history must survive) ---
@@ -75,6 +79,18 @@ class Camera(Base, TimestampMixin):
             user, _ = credentials.split(":", 1)
             credentials = f"{user}:***"
         return f"{scheme}://{credentials}@{host}"
+
+    @property
+    def source_kind(self) -> str:
+        """'recorded' for demo:// video files, 'live' for real camera streams."""
+        from app.camera.video_file import is_demo_url
+
+        return "recorded" if is_demo_url(self.rtsp_url) else "live"
+
+    @property
+    def has_analytics(self) -> bool:
+        cfg = self.analytics_config or {}
+        return bool(cfg.get("lines") or cfg.get("zones"))
 
     def __repr__(self) -> str:
         return f"<Camera {self.camera_id} status={self.status}>"

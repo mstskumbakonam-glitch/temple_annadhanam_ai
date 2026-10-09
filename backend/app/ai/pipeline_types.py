@@ -21,6 +21,7 @@ class PipelineResult:
     events: tuple[Any, ...] = ()         # records emitted by processors
     inference_seconds: float = 0.0
     rejected_detections: int = 0         # malformed boxes dropped this frame
+    frame_shape: tuple[int, int] | None = None   # (height, width) of the processed frame
 
     @property
     def person_count(self) -> int:

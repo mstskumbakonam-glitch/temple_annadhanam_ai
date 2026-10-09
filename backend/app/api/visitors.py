@@ -11,6 +11,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
+from app.security import RequireRole
 from app.api.deps import PaginationParams, TimeRangeParams, get_db
 from app.models.enums import VisitorStatus
 from app.schemas.common import CameraCode, ErrorResponse, Page, VisitorCode
@@ -18,7 +19,7 @@ from app.schemas.event import VisitorEventRead
 from app.schemas.visitor import VisitorRead
 from app.services import visitor_service
 
-router = APIRouter(prefix="/api/visitors", tags=["Visitors"])
+router = APIRouter(prefix="/api/visitors", tags=["Visitors"], dependencies=[RequireRole])
 
 DbSession = Annotated[Session, Depends(get_db)]
 NOT_FOUND = {404: {"model": ErrorResponse, "description": "Visitor not found"}}

@@ -13,6 +13,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
+from app.security import RequireRole
 from app.api.deps import PaginationParams, TimeRangeParams, get_db
 from app.models.enums import PersonType
 from app.schemas.common import CameraCode, ErrorResponse, HallCode, Page, SeatCode
@@ -25,7 +26,7 @@ from app.schemas.seat import (
 )
 from app.services import seat_service
 
-router = APIRouter(prefix="/api/seats", tags=["Seats"])
+router = APIRouter(prefix="/api/seats", tags=["Seats"], dependencies=[RequireRole])
 
 DbSession = Annotated[Session, Depends(get_db)]
 NOT_FOUND = {404: {"model": ErrorResponse, "description": "Seat not found"}}

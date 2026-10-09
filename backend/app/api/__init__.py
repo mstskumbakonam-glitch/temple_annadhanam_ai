@@ -5,6 +5,7 @@ response model. Query construction and transactions live in app/services.
 """
 
 from app.api.ai import router as ai_router
+from app.api.analytics import router as analytics_router
 from app.api.cameras import router as cameras_router
 from app.api.dashboard import router as dashboard_router
 from app.api.errors import register_exception_handlers
@@ -19,6 +20,7 @@ ALL_ROUTERS = [
     dashboard_router,
     cameras_router,
     ai_router,
+    analytics_router,
     visitors_router,
     staff_router,
     seats_router,
@@ -31,6 +33,7 @@ __all__ = [
     "dashboard_router",
     "cameras_router",
     "ai_router",
+    "analytics_router",
     "visitors_router",
     "staff_router",
     "seats_router",
