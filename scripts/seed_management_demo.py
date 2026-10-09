@@ -7,7 +7,8 @@ DEMO_MODE=true and APP_ENV is not production.
 
 Usage (from backend/, virtualenv active):
     python ../scripts/seed_management_demo.py           # create (idempotent)
-    python ../scripts/seed_management_demo.py --reset   # remove all sample rows first
+    python ../scripts/seed_management_demo.py --reset   # remove all sample rows, then recreate
+    python ../scripts/seed_management_demo.py --remove  # remove all sample rows only
 """
 
 from __future__ import annotations
@@ -131,17 +132,20 @@ def seed() -> None:
 
 def main() -> int:
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--reset", action="store_true")
+    p.add_argument("--reset", action="store_true", help="remove sample rows, then recreate them")
+    p.add_argument("--remove", action="store_true", help="remove sample rows and stop")
     args = p.parse_args()
     settings = get_settings()
     if settings.is_production:
         raise SystemExit("Refusing: APP_ENV is production.")
-    if not settings.demo_mode:
+    if not settings.demo_mode and not args.remove:
         raise SystemExit("Refusing: sample data is only created when DEMO_MODE=true.")
-    if args.reset:
+    if args.reset or args.remove:
         with SessionLocal() as s:
             reset(s)
         print("Removed sample rows.")
+        if args.remove:
+            return 0
     seed()
     return 0
 
