@@ -1,0 +1,26 @@
+# Python 3.12+
+
+# --- Web framework ---
+fastapi>=0.115
+uvicorn[standard]>=0.30      # includes websockets support
+pydantic>=2.8
+pydantic-settings>=2.4
+
+# --- Database (PostgreSQL only) ---
+sqlalchemy>=2.0
+psycopg[binary]>=3.2         # psycopg 3
+alembic>=1.13
+
+# --- Computer vision / AI ---
+numpy>=1.26
+opencv-python-headless>=4.9
+ultralytics>=8.3             # YOLO + the ByteTrack implementation (pulls in torch)
+lap>=0.5.12                  # required by Ultralytics' ByteTrack. Listed explicitly because
+                             # runtime auto-install is disabled (YOLO_AUTOINSTALL=False).
+# CPU-only machines can install a much smaller torch first:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+# Face detection/embedding library is chosen in Phase 7 (kept out for now to keep install light).
+
+# --- Testing ---
+pytest>=8.0
+httpx>=0.27                  # FastAPI TestClient

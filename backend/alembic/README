@@ -1,0 +1,9 @@
+Alembic migration environment for Temple Annadhanam AI (PostgreSQL only).
+
+The database URL is read from backend/.env via app.config, not from alembic.ini.
+
+Run from the backend/ directory:
+  alembic current
+  alembic revision --autogenerate -m "description"
+  alembic upgrade head
+  alembic downgrade -1

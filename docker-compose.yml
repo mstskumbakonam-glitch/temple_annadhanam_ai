@@ -1,0 +1,29 @@
+# PostgreSQL 16 for local development.
+# Start with:  docker compose --env-file backend/.env up -d postgres
+# (backend/.env is the single source of truth for credentials.)
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: temple_annadhanam_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-temple_annadhanam}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in backend/.env}
+    ports:
+      # Bound to localhost only so the database is not exposed on the network.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # Creates the pytest database on first startup of an empty volume.
+      - ./scripts/init-test-db.sh:/docker-entrypoint-initdb.d/10-init-test-db.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+volumes:
+  postgres_data:
