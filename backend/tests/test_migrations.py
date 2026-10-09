@@ -307,3 +307,31 @@ def test_phase5_downgrade_removes_ai_rows_restores_constraint_and_upgrades_again
             "INSERT INTO camera_events (camera_id, event_type) "
             "SELECT id, 'AI_STOPPED' FROM cameras WHERE camera_id = 'MIG5-UP'"))
         conn.execute(text("DELETE FROM cameras WHERE camera_id = 'MIG5-UP'"))
+
+
+def test_phase5c_keeps_existing_seats_under_a_labelled_placeholder(alembic_cfg, test_engine):
+    command.upgrade(alembic_cfg, "head")
+    command.downgrade(alembic_cfg, PHASE5B_REVISION)
+    with test_engine.begin() as conn:
+        conn.execute(text("INSERT INTO seats (seat_id, hall_id) VALUES ('S01', 'LEGACY')"))
+    try:
+        command.upgrade(alembic_cfg, "head")
+        with test_engine.connect() as conn:
+            row = conn.execute(text(
+                "SELECT t.temple_code, t.name, h.hall_code, s.status FROM seats s "
+                "JOIN annadhanam_halls h ON h.hall_code = s.hall_id JOIN temples t ON t.id = h.temple_id "
+                "WHERE s.seat_id = 'S01'")).one()
+        assert row == ("UNASSIGNED", "Unassigned (migrated)", "LEGACY", "AVAILABLE")
+    finally:
+        with test_engine.begin() as conn:
+            conn.execute(text("DELETE FROM seats WHERE hall_id = 'LEGACY'"))
+            conn.execute(text("DELETE FROM annadhanam_halls WHERE hall_code = 'LEGACY'"))
+            conn.execute(text("DELETE FROM temples WHERE temple_code = 'UNASSIGNED'"))
+
+
+def test_empty_database_gets_no_placeholder_temple(alembic_cfg, test_engine):
+    command.upgrade(alembic_cfg, "head")
+    command.downgrade(alembic_cfg, PHASE5B_REVISION)
+    command.upgrade(alembic_cfg, "head")
+    with test_engine.connect() as conn:
+        assert conn.execute(text("SELECT count(*) FROM temples WHERE temple_code = 'UNASSIGNED'")).scalar() == 0
