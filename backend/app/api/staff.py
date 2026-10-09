@@ -13,7 +13,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Response, status
 from sqlalchemy.orm import Session
 
-from fastapi import Depends, Request
+from fastapi import Request
 
 from app.security import Role, role_guard
 from app.api.deps import PaginationParams, TimeRangeParams, get_db

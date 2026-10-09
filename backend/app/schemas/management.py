@@ -15,7 +15,7 @@ from app.models.enums import (
     SeatStatusSource,
     SessionStatus,
 )
-from app.schemas.common import HallCode, NonEmptyName, SeatCode, StaffCode
+from app.schemas.common import HallCode, StaffCode
 
 TempleCode = Annotated[
     str,

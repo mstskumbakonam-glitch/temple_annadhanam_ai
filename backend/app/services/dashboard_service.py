@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 from app.models import Camera, Visitor
 from app.models.enums import CameraStatus
 from app.schemas.dashboard import DashboardSummary, HallOccupancy
-from app.services import seat_service, staff_service, visitor_service
+from app.services import staff_service, visitor_service
 
 
 def _camera_counts(session: Session) -> tuple[int, int, int]:

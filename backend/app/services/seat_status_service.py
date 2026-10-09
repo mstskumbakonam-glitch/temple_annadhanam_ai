@@ -28,7 +28,7 @@ from app.schemas.management import (
     SeatStatusEventRead,
 )
 from app.services.exceptions import ConflictError, NotFoundError, ValidationError
-from app.services.pagination import PageResult, paginate
+from app.services.pagination import PageResult
 from app.services.temple_service import get_hall
 from app.utils.time import utc_now
 
