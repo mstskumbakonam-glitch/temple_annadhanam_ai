@@ -14,10 +14,12 @@
 
 from __future__ import annotations
 
+import json
 import logging
 import math
 import threading
 from collections.abc import Callable
+from dataclasses import replace
 from typing import TYPE_CHECKING
 
 from sqlalchemy import select, text
@@ -33,7 +35,8 @@ from app.ai.model_loader import (
 )
 from app.ai.pipeline import DetectionPipeline, build_pipeline
 from app.ai.tracker import TrackerSettings
-from app.camera.rtsp import CameraConfig, FrameSourceFactory, opencv_source_factory
+from app.ai.analytics_config import AnalyticsConfig, parse_analytics_config
+from app.camera.rtsp import CameraConfig, FrameSourceFactory, build_source_factory
 from app.camera.state import (
     ManagerState,
     ManagerStatusHolder,
@@ -79,9 +82,7 @@ class CameraManager:
         self._registry = registry
         self._status = status
         self._model_registry = model_registry
-        self._source_factory = source_factory or opencv_source_factory(
-            settings.camera_rtsp_transport
-        )
+        self._source_factory = source_factory or build_source_factory(settings)
         self._camera_loader = camera_loader or self._load_cameras_from_db
         self._worker_settings = worker_settings or WorkerSettings.from_settings(settings)
         self._use_lock = use_advisory_lock
@@ -286,9 +287,16 @@ class CameraManager:
     def _start_worker(self, config: CameraConfig) -> bool:
         """Start one camera. Returns False only for a model configuration problem."""
         runtime = self._registry.register(config.camera_id)
+        worker_settings = self._worker_settings
+        analytics = self._analytics_config(config)
+        if analytics.tuning.process_fps is not None:
+            worker_settings = replace(worker_settings, process_fps=analytics.tuning.process_fps)
+        for warning in analytics.warnings(worker_settings.process_fps):
+            log_event(logger, logging.WARNING, "AI", config.camera_id, "config_warning",
+                      detail=warning)
         worker = CameraWorker(
             config,
-            self._worker_settings,
+            worker_settings,
             pipeline_factory=self._make_pipeline,
             source_factory=self._source_factory,
             sink=self._sink,
@@ -314,16 +322,21 @@ class CameraManager:
     def _make_pipeline(self, config: CameraConfig) -> DetectionPipeline:
         s = self._settings
         assert self._handle is not None
+        analytics = self._analytics_config(config)
+        tuning = analytics.tuning
+        confidence = tuning.confidence if tuning.confidence is not None else s.ai_confidence
+        low = min(s.ai_track_low_confidence, confidence)
+        fps = tuning.process_fps if tuning.process_fps is not None else s.ai_process_fps
         detector_settings = DetectorSettings(
-            confidence_floor=min(s.ai_confidence, s.ai_track_low_confidence),
+            confidence_floor=min(confidence, low),
             iou=s.ai_iou,
-            image_size=s.ai_image_size,
+            image_size=tuning.image_size or s.ai_image_size,
             target_classes=tuple(s.ai_target_class_list),
         )
         tracker_settings = TrackerSettings(
-            high_confidence=s.ai_confidence,
-            low_confidence=s.ai_track_low_confidence,
-            max_lost_frames=max(1, math.ceil(s.ai_track_lost_seconds * s.ai_process_fps)),
+            high_confidence=confidence,
+            low_confidence=low,
+            max_lost_frames=max(1, math.ceil(s.ai_track_lost_seconds * fps)),
         )
         return build_pipeline(
             camera_id=config.camera_id,
@@ -333,7 +346,20 @@ class CameraManager:
             tracker_settings=tracker_settings,
             min_hits=s.ai_track_min_hits,
             persist_track_events=s.ai_persist_track_events,
+            analytics_config=analytics,
+            persist_count_history=s.ai_persist_count_history,
         )
+
+    @staticmethod
+    def _analytics_config(config: CameraConfig) -> AnalyticsConfig:
+        """Stored config is validated by the API; a bad row (edited by hand in SQL)
+        disables lines/zones for that camera instead of stopping its counting."""
+        try:
+            return parse_analytics_config(json.loads(config.analytics_json) if config.analytics_json else None)
+        except Exception as exc:
+            log_event(logger, logging.ERROR, "AI", config.camera_id, "invalid_analytics_config",
+                      error=type(exc).__name__)
+            return AnalyticsConfig()
 
     # ---------------------------------------------------------- database read
     def _load_cameras_from_db(self) -> list[CameraConfig]:
@@ -353,6 +379,10 @@ class CameraManager:
                     camera_id=row.camera_id,
                     camera_name=row.camera_name,
                     rtsp_url=row.rtsp_url,
+                    analytics_json=(
+                        json.dumps(row.analytics_config, sort_keys=True)
+                        if row.analytics_config else ""
+                    ),
                 )
                 for row in rows
             ]

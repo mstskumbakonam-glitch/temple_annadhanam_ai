@@ -58,6 +58,16 @@ class OccupancyStatus(StrEnum):
     RELEASED = "RELEASED"
 
 
+class AlertType(StrEnum):
+    CROWD_DENSITY = "CROWD_DENSITY"        # a zone stayed at/above the alert density level
+    QUEUE_CONGESTION = "QUEUE_CONGESTION"  # a queue zone stayed at/above its length limit
+
+
+class AlertSeverity(StrEnum):
+    WARNING = "warning"
+    CRITICAL = "critical"
+
+
 def values(enum_cls) -> list[str]:
     """Member values, for building CHECK constraints."""
     return [member.value for member in enum_cls]

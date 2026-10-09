@@ -10,6 +10,36 @@ from app.models.enums import CameraStatus
 from app.schemas.common import CameraCode, NonEmptyName
 
 
+ALLOWED_SCHEMES = ("rtsp://", "rtsps://", "http://", "https://")
+
+
+def validate_stream_url(value: str | None) -> str | None:
+    """Accept camera stream URLs and demo://<file> recordings, nothing else.
+
+    file://, local paths and other OpenCV/FFmpeg protocols are refused: a camera
+    URL must never become a way to make the server read arbitrary local files.
+    """
+    if value is None or not value.strip():
+        return None
+    url = value.strip()
+    from app.camera.video_file import DemoSourceError, demo_file_name, is_demo_url
+
+    if is_demo_url(url):
+        try:
+            demo_file_name(url)
+        except DemoSourceError as exc:
+            raise ValueError(str(exc)) from exc
+        return url
+    if not url.lower().startswith(ALLOWED_SCHEMES):
+        raise ValueError(
+            "rtsp_url must start with rtsp://, rtsps://, http://, https:// "
+            "(or demo://<file> for a recorded demo video)"
+        )
+    if any(ch in url for ch in ("\n", "\r", " ")):
+        raise ValueError("rtsp_url must not contain spaces or line breaks")
+    return url
+
+
 class CameraBase(BaseModel):
     camera_name: NonEmptyName = Field(description="Display name, e.g. 'Main entrance'.")
     location: str | None = Field(default=None, max_length=255)
@@ -27,12 +57,7 @@ class CameraCreate(CameraBase):
     @field_validator("rtsp_url")
     @classmethod
     def _check_scheme(cls, value: str | None) -> str | None:
-        if value is None or not value.strip():
-            return None
-        url = value.strip()
-        if not url.lower().startswith(("rtsp://", "rtsps://", "http://", "https://")):
-            raise ValueError("rtsp_url must start with rtsp://, rtsps://, http:// or https://")
-        return url
+        return validate_stream_url(value)
 
 
 class CameraUpdate(BaseModel):
@@ -47,6 +72,12 @@ class CameraUpdate(BaseModel):
         description="Set manually in this phase; the camera worker owns it from Phase 5.",
     )
     fps: float | None = Field(default=None, ge=0)
+
+    @field_validator("rtsp_url")
+    @classmethod
+    def _check_scheme(cls, value: str | None) -> str | None:
+        # Previously unvalidated on update: file:///etc/... could be stored here.
+        return validate_stream_url(value)
 
 
 class CameraRead(CameraBase):
@@ -65,6 +96,10 @@ class CameraRead(CameraBase):
     rtsp_url_masked: str | None = Field(
         default=None, description="RTSP URL with the password replaced by '***'."
     )
+    source_kind: str = Field(
+        default="live", description="'recorded' for demo:// videos, otherwise 'live'."
+    )
+    has_analytics: bool = Field(default=False, description="Lines or zones are configured.")
     created_at: datetime
     updated_at: datetime
 
@@ -80,3 +115,4 @@ class CameraStatusRead(BaseModel):
     enabled: bool
     fps: float | None = None
     last_frame_time: datetime | None = None
+    source_kind: str = "live"

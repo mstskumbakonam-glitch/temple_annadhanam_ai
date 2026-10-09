@@ -151,7 +151,8 @@ def test_reset_tracking_closes_confirmed_tracks_and_starts_a_new_session():
     old_session = pipeline.tracker_session
 
     closing = pipeline.reset_tracking(packet(when=9).timestamp)
-    lost = [e for e in closing.events if e.event_type is VisitorEventType.LOST]
+    lost = [e for e in closing.events
+            if getattr(e, "event_type", None) is VisitorEventType.LOST]
     assert len(lost) == 2
     assert {e.metadata["reason"] for e in lost} == {"tracker_session_ended"}
     assert {e.metadata["tracker_session"] for e in lost} == {old_session}

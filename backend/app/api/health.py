@@ -2,6 +2,8 @@
 
 from fastapi import APIRouter, Response, status
 
+from app.security import RequireRole
+
 from app.config import get_settings
 from app.database import check_database_connection
 
@@ -17,10 +19,12 @@ def health() -> dict:
         "app": settings.app_name,
         "version": settings.app_version,
         "environment": settings.app_env,
+        "auth_required": settings.auth_enabled,
+        "demo_mode": settings.demo_mode,
     }
 
 
-@router.get("/db")
+@router.get("/db", dependencies=[RequireRole])
 def database_health(response: Response) -> dict:
     """PostgreSQL connectivity check.
 

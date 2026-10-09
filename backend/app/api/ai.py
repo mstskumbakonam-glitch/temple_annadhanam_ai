@@ -7,12 +7,13 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from app.security import RequireRole
 from app.api.deps import get_db
 from app.config import get_settings
 from app.schemas.ai import AIRuntimeStatus
 from app.services import ai_status_service
 
-router = APIRouter(prefix="/api/ai", tags=["AI Runtime"])
+router = APIRouter(prefix="/api/ai", tags=["AI Runtime"], dependencies=[RequireRole])
 
 DbSession = Annotated[Session, Depends(get_db)]
 
