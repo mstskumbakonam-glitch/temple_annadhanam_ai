@@ -17,17 +17,19 @@ class DashboardSummary(BaseModel):
     today_entries: int = Field(ge=0)
     today_exits: int = Field(ge=0)
     staff_present: int = Field(ge=0)
-    total_seats: int = Field(ge=0)
+    total_seats: int = Field(ge=0, description="Seat capacity: enabled seats not out of service.")
     occupied_seats: int = Field(ge=0)
-    empty_seats: int = Field(ge=0)
+    reserved_seats: int = Field(default=0, ge=0)
+    empty_seats: int = Field(ge=0, description="Available = capacity - occupied - reserved.")
     occupancy_percentage: float = Field(ge=0, le=100)
 
 
 class HallOccupancy(BaseModel):
     hall_id: HallCode
-    total_seats: int = Field(ge=0)
+    total_seats: int = Field(ge=0, description="Seat capacity: enabled seats not out of service.")
     occupied_seats: int = Field(ge=0)
-    empty_seats: int = Field(ge=0)
+    reserved_seats: int = Field(default=0, ge=0)
+    empty_seats: int = Field(ge=0, description="Available = capacity - occupied - reserved.")
     occupancy_percentage: float = Field(
         ge=0, le=100, description="occupied / total * 100, or 0.0 when the hall has no seats."
     )

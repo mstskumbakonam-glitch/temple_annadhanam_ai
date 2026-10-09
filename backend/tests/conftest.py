@@ -137,9 +137,34 @@ def camera(session):
 
 
 @pytest.fixture
-def seat(session, camera):
+def hall_factory(session):
+    """Create (or reuse) halls by code under one test temple. Seats need a real hall."""
+    from sqlalchemy import select
+
+    from app.models import AnnadhanamHall, Temple
+
+    def make(code: str = "MAIN", temple_code: str = "TEST-TEMPLE") -> AnnadhanamHall:
+        hall = session.scalar(select(AnnadhanamHall).where(AnnadhanamHall.hall_code == code))
+        if hall is not None:
+            return hall
+        temple = session.scalar(select(Temple).where(Temple.temple_code == temple_code))
+        if temple is None:
+            temple = Temple(temple_code=temple_code, name=f"Test temple {temple_code}")
+            session.add(temple)
+            session.flush()
+        hall = AnnadhanamHall(hall_code=code, temple_id=temple.id, name=f"Hall {code}")
+        session.add(hall)
+        session.flush()
+        return hall
+
+    return make
+
+
+@pytest.fixture
+def seat(session, camera, hall_factory):
     from app.models import Seat
 
+    hall_factory("TESTHALL")
     obj = Seat(
         seat_id="S01",
         hall_id="TESTHALL",
@@ -230,7 +255,8 @@ def api_staff(api_client):
 
 
 @pytest.fixture
-def api_seat(api_client, api_camera):
+def api_seat(api_client, api_camera, hall_factory):
+    hall_factory("MAIN")
     response = api_client.post(
         "/api/seats",
         json={

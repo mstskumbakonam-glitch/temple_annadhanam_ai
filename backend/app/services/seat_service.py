@@ -66,7 +66,15 @@ def list_seats(
     return paginate(session, statement, page, page_size)
 
 
+def _require_hall(session: Session, hall_code: str) -> None:
+    from app.models import AnnadhanamHall
+
+    if session.scalar(select(AnnadhanamHall.id).where(AnnadhanamHall.hall_code == hall_code)) is None:
+        raise NotFoundError(f"Hall '{hall_code}' not found. Create the hall first.")
+
+
 def create_seat(session: Session, payload: SeatCreate) -> Seat:
+    _require_hall(session, payload.hall_id)
     seat = Seat(
         seat_id=payload.seat_id,
         hall_id=payload.hall_id,
@@ -242,21 +250,16 @@ def list_seat_history(
 
 # ------------------------------------------------------------ occupancy counts
 def occupancy_counts(session: Session, hall_id: str | None = None) -> tuple[int, int]:
-    """(total_seats, occupied_seats) for enabled seats, computed in PostgreSQL."""
-    total_statement = select(func.count()).select_from(Seat).where(Seat.enabled.is_(True))
-    occupied_statement = (
-        select(func.count())
-        .select_from(SeatOccupancy)
-        .join(Seat, SeatOccupancy.seat_id == Seat.id)
-        .where(SeatOccupancy.status == OccupancyStatus.OCCUPIED, Seat.enabled.is_(True))
-    )
-    if hall_id is not None:
-        total_statement = total_statement.where(Seat.hall_id == hall_id)
-        occupied_statement = occupied_statement.where(Seat.hall_id == hall_id)
+    """(seat_capacity, occupied_seats) from the CONFIRMED seat status.
 
-    total = session.scalar(total_statement) or 0
-    occupied = session.scalar(occupied_statement) or 0
-    return total, occupied
+    Capacity = enabled seats not out of service; occupied = status OCCUPIED.
+    AI observations (seat_occupancy rows) are not confirmations and are not counted.
+    """
+    from app.services.temple_service import add_counts, seat_counts_by_hall
+
+    counts = seat_counts_by_hall(session, [hall_id] if hall_id is not None else None)
+    total = add_counts(counts.values())
+    return total.capacity, total.occupied
 
 
 def occupancy_percentage(total: int, occupied: int) -> float:

@@ -112,6 +112,7 @@ class Settings(BaseSettings):
     # With no keys set the API is OPEN, which is allowed only outside production.
     api_viewer_keys: str = ""
     api_admin_keys: str = ""
+    api_operator_keys: str = ""           # hall staff: seats, sessions, attendance
     docs_enabled: bool | None = None      # default: on in development, off in production
     rate_limit_per_minute: int = Field(default=600, ge=0)        # per client, 0 = off
     rate_limit_writes_per_minute: int = Field(default=60, ge=0)  # POST/PUT/DELETE
@@ -180,7 +181,8 @@ class Settings(BaseSettings):
                 )
             if "*" in self.cors_origin_list:
                 raise ValueError("CORS_ORIGINS='*' is not allowed in production.")
-            weak = [k for k in self.viewer_key_list + self.admin_key_list if len(k) < 24]
+            weak = [k for k in self.viewer_key_list + self.operator_key_list + self.admin_key_list
+                    if len(k) < 24]
             if weak:
                 raise ValueError("API keys must be at least 24 characters in production.")
         return self
@@ -194,12 +196,16 @@ class Settings(BaseSettings):
         return [k.strip() for k in self.api_viewer_keys.split(",") if k.strip()]
 
     @property
+    def operator_key_list(self) -> list[str]:
+        return [k.strip() for k in self.api_operator_keys.split(",") if k.strip()]
+
+    @property
     def admin_key_list(self) -> list[str]:
         return [k.strip() for k in self.api_admin_keys.split(",") if k.strip()]
 
     @property
     def auth_enabled(self) -> bool:
-        return bool(self.viewer_key_list or self.admin_key_list)
+        return bool(self.viewer_key_list or self.operator_key_list or self.admin_key_list)
 
     @property
     def docs_visible(self) -> bool:

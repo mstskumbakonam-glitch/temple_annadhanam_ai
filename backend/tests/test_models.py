@@ -235,7 +235,8 @@ def test_exited_attendance_requires_exit_time(session, staff_member, camera):
 
 
 # ----------------------------------------------------------------- seats
-def test_seat_creation_with_polygon(session, camera):
+def test_seat_creation_with_polygon(session, camera, hall_factory):
+    hall_factory("TESTHALL")
     seat = Seat(
         seat_id="S02",
         hall_id="TESTHALL",
@@ -250,7 +251,8 @@ def test_seat_creation_with_polygon(session, camera):
     assert seat.hall_id == "TESTHALL"
 
 
-def test_seat_id_unique_within_hall(session, camera):
+def test_seat_id_unique_within_hall(session, camera, hall_factory):
+    hall_factory("H1")
     session.add(Seat(seat_id="S09", hall_id="H1", camera_id=camera.id))
     session.flush()
     session.add(Seat(seat_id="S09", hall_id="H1", camera_id=camera.id))
@@ -258,7 +260,9 @@ def test_seat_id_unique_within_hall(session, camera):
         session.flush()
 
 
-def test_same_seat_id_allowed_in_different_hall(session, camera):
+def test_same_seat_id_allowed_in_different_hall(session, camera, hall_factory):
+    hall_factory("HALL-A")
+    hall_factory("HALL-B")
     session.add(Seat(seat_id="S01", hall_id="HALL-A", camera_id=camera.id))
     session.add(Seat(seat_id="S01", hall_id="HALL-B", camera_id=camera.id))
     session.flush()  # must not raise
@@ -272,7 +276,8 @@ def test_seat_polygon_must_be_json_array(session, camera):
         session.flush()
 
 
-def test_future_seats_can_be_added(session, camera):
+def test_future_seats_can_be_added(session, camera, hall_factory):
+    hall_factory("GROW")
     """S07, S08, S09... are ordinary rows; nothing caps the seat count."""
     for index in range(7, 13):
         session.add(Seat(seat_id=f"S{index:02d}", hall_id="GROW", camera_id=camera.id))
